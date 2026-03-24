@@ -143,8 +143,8 @@ function StatusBadge({status}){
   return <span style={{background:s.bg,color:s.color,fontSize:10,fontWeight:600,borderRadius:4,padding:"2px 7px",whiteSpace:"nowrap"}}>{s.label}</span>;
 }
 
-function Avatar({name,size=28}){
-  const color=avatarColor(name||"?");
+function Avatar({name,size=28,color:colorOverride}){
+  const color=colorOverride||avatarColor(name||"?");
   return(
     <div style={{width:size,height:size,borderRadius:"50%",background:color+"22",color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:size*0.38,fontWeight:600,flexShrink:0}}>
       {initials(name||"?")}
@@ -280,7 +280,7 @@ function AccessDenied({email,theme,onSignOut}){
 }
 
 // ── Changelog ─────────────────────────────────────────────────────────────────
-function ChangelogFeed({theme,onTaskClick}){
+function ChangelogFeed({theme,onTaskClick,userColorMap={}}){
   const [entries,setEntries]=useState([]);
   const [loading,setLoading]=useState(true);
   async function load(){
@@ -301,7 +301,7 @@ function ChangelogFeed({theme,onTaskClick}){
         return(
           <div key={e.id} style={{display:"flex",gap:10,padding:"10px 16px",borderBottom:i<entries.length-1?`0.5px solid ${theme.border}`:"none",cursor:e.task_title?"pointer":"default"}}
             onClick={()=>e.task_title&&onTaskClick&&onTaskClick(e)}>
-            <Avatar name={e.user_name} size={30}/>
+            <Avatar name={e.user_name} size={30} color={userColorMap[e.user_name]}/>
             <div style={{flex:1,minWidth:0}}>
               <div style={{display:"flex",alignItems:"baseline",gap:6,flexWrap:"wrap"}}>
                 <span style={{fontSize:13,fontWeight:500,color:theme.textPrimary}}>{e.user_name}</span>
@@ -523,6 +523,92 @@ function AddTaskModal({depts,onSave,onClose,theme}){
   );
 }
 
+// ── Profile Modal ─────────────────────────────────────────────────────────────
+const PROFILE_COLORS=["#534AB7","#185FA5","#0F6E56","#993C1D","#639922","#993556","#854F0B","#5F5E5A","#3B6D11","#D4952C","#1A7A6B","#8B3FA8"];
+
+function ProfileModal({currentUser,allowedUser,currentColor,currentAvatar,onSave,onClose,theme}){
+  const [selectedColor,setSelectedColor]=useState(currentColor||PROFILE_COLORS[0]);
+  const [avatarPreview,setAvatarPreview]=useState(currentAvatar||null);
+  const [saving,setSaving]=useState(false);
+  const fileRef=useRef(null);
+
+  const handleFile=(e)=>{
+    const file=e.target.files[0];
+    if(!file)return;
+    const reader=new FileReader();
+    reader.onload=(ev)=>setAvatarPreview(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleSave=async()=>{
+    setSaving(true);
+    await onSave({color:selectedColor,avatar_url:avatarPreview});
+    setSaving(false);
+    onClose();
+  };
+
+  return(
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:theme.surface,borderRadius:16,width:"100%",maxWidth:380,padding:"24px 24px 20px"}}>
+
+        {/* Header */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+          <span style={{fontSize:15,fontWeight:600,color:theme.textPrimary}}>Edit Profile</span>
+          <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:theme.textTertiary,fontSize:20,lineHeight:1,padding:"0 2px"}}>×</button>
+        </div>
+
+        {/* Avatar */}
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center",marginBottom:22,gap:8}}>
+          <div style={{position:"relative",cursor:"pointer"}} onClick={()=>fileRef.current?.click()}>
+            {avatarPreview
+              ?<img src={avatarPreview} style={{width:76,height:76,borderRadius:"50%",objectFit:"cover",border:`3px solid ${selectedColor}`}} alt=""/>
+              :<div style={{width:76,height:76,borderRadius:"50%",background:selectedColor+"22",color:selectedColor,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,fontWeight:600,border:`3px solid ${selectedColor}`}}>
+                {initials(currentUser)}
+              </div>
+            }
+            <div style={{position:"absolute",bottom:0,right:0,width:24,height:24,borderRadius:"50%",background:BRAND,display:"flex",alignItems:"center",justifyContent:"center",border:`2px solid ${theme.surface}`}}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#2c2c2a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{display:"none"}}/>
+          </div>
+          <div style={{textAlign:"center"}}>
+            <div style={{fontSize:13,fontWeight:500,color:theme.textPrimary}}>{currentUser}</div>
+            {allowedUser?.email&&<div style={{fontSize:11,color:theme.textTertiary}}>{allowedUser.email}</div>}
+          </div>
+          {avatarPreview&&(
+            <button onClick={()=>setAvatarPreview(null)} style={{fontSize:11,color:theme.textTertiary,background:"none",border:"none",cursor:"pointer",textDecoration:"underline",padding:0}}>Remove photo</button>
+          )}
+        </div>
+
+        {/* Color picker */}
+        <div style={{marginBottom:22}}>
+          <div style={{fontSize:11,fontWeight:600,color:theme.textTertiary,textTransform:"uppercase",letterSpacing:".06em",marginBottom:10}}>Task Tracker Color</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:12}}>
+            {PROFILE_COLORS.map(c=>(
+              <button key={c} onClick={()=>setSelectedColor(c)}
+                style={{width:30,height:30,borderRadius:"50%",background:c,border:selectedColor===c?`3px solid ${theme.textPrimary}`:`3px solid transparent`,cursor:"pointer",outline:"none",flexShrink:0,transition:"border-color .15s"}}/>
+            ))}
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:theme.surface2,borderRadius:8}}>
+            <div style={{width:28,height:28,borderRadius:"50%",background:selectedColor+"22",color:selectedColor,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:600,flexShrink:0}}>
+              {initials(currentUser)}
+            </div>
+            <span style={{fontSize:12,color:theme.textSecondary}}>Preview of your task tracker appearance</span>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+          <button onClick={onClose} style={{padding:"8px 16px",borderRadius:8,border:`0.5px solid ${theme.borderMid}`,background:"transparent",color:theme.textSecondary,fontSize:13,cursor:"pointer"}}>Cancel</button>
+          <button onClick={handleSave} disabled={saving} style={{padding:"8px 18px",borderRadius:8,border:"none",background:BRAND,color:"#2c2c2a",fontSize:13,fontWeight:600,cursor:"pointer"}}>
+            {saving?"Saving…":"Save changes"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App(){
   const [session,setSession]=useState(undefined);
@@ -540,6 +626,9 @@ export default function App(){
   const [openDepts,setOpenDepts]=useState({});
   const [showAddTask,setShowAddTask]=useState(false);
   const [darkMode,setDarkMode]=useState(false);
+  const [showProfile,setShowProfile]=useState(false);
+  const [profileColor,setProfileColor]=useState(null);
+  const [profileAvatar,setProfileAvatar]=useState(null);
   const isMobile=useIsMobile();
 
   const theme={
@@ -555,6 +644,10 @@ export default function App(){
   };
 
   useEffect(()=>{const dm=localStorage.getItem("durus_dark");if(dm==="1")setDarkMode(true);},[]);
+  useEffect(()=>{
+    const c=localStorage.getItem("durus_profile_color");if(c)setProfileColor(c);
+    const a=localStorage.getItem("durus_profile_avatar");if(a)setProfileAvatar(a);
+  },[]);
 
   useEffect(()=>{
     supabase.auth.getSession().then(({data:{session}})=>{
@@ -578,7 +671,21 @@ export default function App(){
   }
 
   const signOut=async()=>{await supabase.auth.signOut();setSession(null);setAllowedUser(null);};
+
+  const saveProfile=async({color,avatar_url})=>{
+    if(color){localStorage.setItem("durus_profile_color",color);setProfileColor(color);}
+    if(avatar_url!==undefined){
+      if(avatar_url){localStorage.setItem("durus_profile_avatar",avatar_url);}
+      else{localStorage.removeItem("durus_profile_avatar");}
+      setProfileAvatar(avatar_url);
+    }
+    try{await supabase.from("allowed_users").update({color,avatar_url}).eq("email",session?.user?.email);}
+    catch(e){/* stored locally already */}
+  };
+
   const currentUser=allowedUser?.display_name||session?.user?.user_metadata?.full_name||session?.user?.email?.split("@")[0]||"";
+  const effectiveColor=profileColor||allowedUser?.color||BRAND;
+  const effectiveAvatar=profileAvatar||allowedUser?.avatar_url||session?.user?.user_metadata?.avatar_url||null;
 
   function buildDepts(rows){
     const map={};
@@ -725,10 +832,10 @@ export default function App(){
               <button onClick={toggleDark} style={{width:34,height:19,borderRadius:10,border:"none",background:darkMode?BRAND:"#d3d1c7",cursor:"pointer",position:"relative",flexShrink:0,padding:0}}>
                 <div style={{position:"absolute",top:2,left:darkMode?16:2,width:15,height:15,borderRadius:"50%",background:"#fff",transition:"left .2s"}}/>
               </button>
-              <div style={{display:"flex",alignItems:"center",gap:6,background:theme.surface2,borderRadius:20,padding:"3px 10px 3px 5px"}}>
-                {session?.user?.user_metadata?.avatar_url
-                  ?<img src={session.user.user_metadata.avatar_url} style={{width:22,height:22,borderRadius:"50%",objectFit:"cover"}} alt=""/>
-                  :<div style={{width:22,height:22,borderRadius:"50%",background:BRAND,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#2c2c2a"}}>{currentUser[0]}</div>
+              <div onClick={()=>setShowProfile(true)} style={{display:"flex",alignItems:"center",gap:6,background:theme.surface2,borderRadius:20,padding:"3px 10px 3px 5px",cursor:"pointer"}} title="Edit profile">
+                {effectiveAvatar
+                  ?<img src={effectiveAvatar} style={{width:22,height:22,borderRadius:"50%",objectFit:"cover"}} alt=""/>
+                  :<div style={{width:22,height:22,borderRadius:"50%",background:effectiveColor,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#fff"}}>{initials(currentUser).slice(0,1)}</div>
                 }
                 <span style={{fontSize:12,fontWeight:500,color:theme.textPrimary}}>{currentUser.split(" ")[0]}</span>
               </div>
@@ -846,7 +953,7 @@ export default function App(){
                 </div>
               </div>
               <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}`}</style>
-              <ChangelogFeed theme={theme} onTaskClick={(entry)=>{const task=allTasks.find(t=>t.t===entry.task_title);if(task)setOpenTask(task.id);}}/>
+              <ChangelogFeed theme={theme} userColorMap={{[currentUser]:effectiveColor}} onTaskClick={(entry)=>{const task=allTasks.find(t=>t.t===entry.task_title);if(task)setOpenTask(task.id);}}/>
             </div>
           </div>
         )}
@@ -914,8 +1021,8 @@ export default function App(){
                             </div>
                             <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
                               {(task.owner||"").split(",").map(s=>s.trim()).filter(Boolean).map(name=>(
-                                <span key={name} style={{display:"inline-flex",alignItems:"center",gap:3,background:avatarColor(name)+"22",color:avatarColor(name),borderRadius:10,padding:"1px 6px 1px 3px",fontSize:10,fontWeight:500,whiteSpace:"nowrap"}}>
-                                  <span style={{width:14,height:14,borderRadius:"50%",background:avatarColor(name),color:"#fff",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:700,flexShrink:0}}>{initials(name)}</span>
+                                <span key={name} style={{display:"inline-flex",alignItems:"center",gap:3,background:(name===currentUser?effectiveColor:avatarColor(name))+"22",color:name===currentUser?effectiveColor:avatarColor(name),borderRadius:10,padding:"1px 6px 1px 3px",fontSize:10,fontWeight:500,whiteSpace:"nowrap"}}>
+                                  <span style={{width:14,height:14,borderRadius:"50%",background:name===currentUser?effectiveColor:avatarColor(name),color:"#fff",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:700,flexShrink:0}}>{initials(name)}</span>
                                   {name.split(" ")[0]}
                                 </span>
                               ))}
@@ -1032,6 +1139,16 @@ export default function App(){
       )}
       {showAddTask&&(
         <AddTaskModal depts={depts} onSave={addTask} onClose={()=>setShowAddTask(false)} theme={theme}/>
+      )}
+      {showProfile&&(
+        <ProfileModal
+          currentUser={currentUser}
+          allowedUser={allowedUser}
+          currentColor={effectiveColor}
+          currentAvatar={effectiveAvatar}
+          onSave={saveProfile}
+          onClose={()=>setShowProfile(false)}
+          theme={theme}/>
       )}
     </div>
   );
