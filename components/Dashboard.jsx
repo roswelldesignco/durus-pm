@@ -283,11 +283,13 @@ function AccessDenied({email,theme,onSignOut}){
 }
 
 // ── Changelog ─────────────────────────────────────────────────────────────────
+const PAGE_SIZE=5;
 function ChangelogFeed({theme,onTaskClick,userColorMap={}}){
   const [entries,setEntries]=useState([]);
   const [loading,setLoading]=useState(true);
+  const [page,setPage]=useState(0);
   async function load(){
-    try{const{data}=await supabase.from("changelog").select("*").order("created_at",{ascending:false}).limit(30);if(data)setEntries(data);}
+    try{const{data}=await supabase.from("changelog").select("*").order("created_at",{ascending:false}).limit(100);if(data){setEntries(data);setPage(0);}}
     catch(e){console.error(e);}
     setLoading(false);
   }
@@ -296,13 +298,18 @@ function ChangelogFeed({theme,onTaskClick,userColorMap={}}){
   const actionColor={completed:"#3B6D11",reopened:"#854F0B",updated:"#185FA5",commented:"#534AB7",added:BRAND,deleted:"#993C1D",status:"#185FA5"};
   if(loading)return <div style={{padding:"20px 16px",textAlign:"center"}}><span style={{fontSize:12,color:theme.textTertiary}}>Loading activity...</span></div>;
   if(!entries.length)return <div style={{padding:"20px 16px",textAlign:"center"}}><span style={{fontSize:12,color:theme.textTertiary}}>No activity yet. Changes will appear here as the team makes updates.</span></div>;
+
+  const totalPages=Math.ceil(entries.length/PAGE_SIZE);
+  const pageEntries=entries.slice(page*PAGE_SIZE,(page+1)*PAGE_SIZE);
+  const btnStyle=(disabled)=>({padding:"4px 10px",borderRadius:6,border:`0.5px solid ${theme.borderMid}`,background:"transparent",color:disabled?theme.textTertiary:theme.textPrimary,fontSize:11,cursor:disabled?"default":"pointer",opacity:disabled?0.4:1});
+
   return(
     <div>
-      {entries.map((e,i)=>{
+      {pageEntries.map((e,i)=>{
         const color=actionColor[e.action]||theme.textSecondary;
         const icon=actionIcon[e.action]||"•";
         return(
-          <div key={e.id} style={{display:"flex",gap:10,padding:"10px 16px",borderBottom:i<entries.length-1?`0.5px solid ${theme.border}`:"none",cursor:e.task_title?"pointer":"default"}}
+          <div key={e.id} style={{display:"flex",gap:10,padding:"10px 16px",borderBottom:i<pageEntries.length-1?`0.5px solid ${theme.border}`:"none",cursor:e.task_title?"pointer":"default"}}
             onClick={()=>e.task_title&&onTaskClick&&onTaskClick(e)}>
             <Avatar name={e.user_name} size={30} color={userColorMap[e.user_name]}/>
             <div style={{flex:1,minWidth:0}}>
@@ -328,6 +335,13 @@ function ChangelogFeed({theme,onTaskClick,userColorMap={}}){
           </div>
         );
       })}
+      {totalPages>1&&(
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 14px",borderTop:`0.5px solid ${theme.border}`}}>
+          <button disabled={page===0} onClick={()=>setPage(p=>p-1)} style={btnStyle(page===0)}>← Prev</button>
+          <span style={{fontSize:11,color:theme.textTertiary}}>Page {page+1} of {totalPages}</span>
+          <button disabled={page===totalPages-1} onClick={()=>setPage(p=>p+1)} style={btnStyle(page===totalPages-1)}>Next →</button>
+        </div>
+      )}
     </div>
   );
 }
