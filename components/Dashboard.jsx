@@ -333,7 +333,7 @@ function ChangelogFeed({theme,onTaskClick,userColorMap={}}){
 }
 
 // ── Team card ─────────────────────────────────────────────────────────────────
-function TeamCard({person,allTasks,theme,currentUser,onTaskClick}){
+function TeamCard({person,allTasks,theme,currentUser,effectiveColor,effectiveAvatar,onTaskClick}){
   const [expanded,setExpanded]=useState(person.name===currentUser);
   const mt=allTasks.filter(t=>person.ids.includes(t.id));
   const dd=mt.filter(t=>t.status==="done").length;
@@ -341,13 +341,18 @@ function TeamCard({person,allTasks,theme,currentUser,onTaskClick}){
   const bl=mt.filter(t=>t.status==="blocked").length;
   const pp=mt.length?Math.round(dd/mt.length*100):0;
   const isMe=person.name===currentUser;
+  const myColor=isMe&&effectiveColor?effectiveColor:person.color;
+  const myBg=isMe&&effectiveColor?effectiveColor+"1a":person.bg;
   const sorted=[...mt.filter(t=>t.status!=="done"),...mt.filter(t=>t.status==="done")];
   const statusDotColor={open:"#888780","in-progress":"#185FA5",blocked:"#993C1D",done:"#3B6D11"};
   return(
     <div style={{background:theme.surface,border:`0.5px solid ${isMe?BRAND:theme.border}`,borderRadius:12,overflow:"hidden"}}>
       <div onClick={()=>setExpanded(e=>!e)} style={{padding:"12px 14px",cursor:"pointer",display:"flex",alignItems:"center",gap:12}}>
-        <div style={{width:40,height:40,borderRadius:"50%",background:person.bg,color:person.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:600,flexShrink:0,position:"relative"}}>
-          {person.initials}
+        <div style={{width:40,height:40,borderRadius:"50%",background:myBg,color:myColor,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:600,flexShrink:0,position:"relative",overflow:"hidden"}}>
+          {isMe&&effectiveAvatar
+            ?<img src={effectiveAvatar} style={{width:40,height:40,borderRadius:"50%",objectFit:"cover",position:"absolute",inset:0}} alt=""/>
+            :person.initials
+          }
           {isMe&&<div style={{position:"absolute",bottom:0,right:0,width:10,height:10,borderRadius:"50%",background:BRAND,border:`2px solid ${theme.surface}`}}/>}
         </div>
         <div style={{flex:1,minWidth:0}}>
@@ -357,7 +362,7 @@ function TeamCard({person,allTasks,theme,currentUser,onTaskClick}){
           </div>
           <div style={{fontSize:11,color:theme.textTertiary,marginBottom:5}}>{person.title}</div>
           <div style={{height:3,background:theme.surface2,borderRadius:2,overflow:"hidden",marginBottom:5}}>
-            <div style={{height:"100%",width:`${pp}%`,background:person.color,borderRadius:2,transition:"width .4s"}}/>
+            <div style={{height:"100%",width:`${pp}%`,background:myColor,borderRadius:2,transition:"width .4s"}}/>
           </div>
           <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
             <span style={{fontSize:10,padding:"2px 7px",borderRadius:10,background:theme.surface2,color:theme.textSecondary}}>{dd}/{mt.length} done</span>
@@ -1216,7 +1221,7 @@ export default function App(){
             <div style={{fontSize:12,color:theme.textTertiary,marginBottom:12}}>Click any team member to see their tasks. Your card is expanded by default.</div>
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               {TEAM_MEMBERS.map(p=>(
-                <TeamCard key={p.name} person={p} allTasks={allTasks} theme={theme} currentUser={currentUser} onTaskClick={(taskId)=>setOpenTask(taskId)}/>
+                <TeamCard key={p.name} person={p} allTasks={allTasks} theme={theme} currentUser={currentUser} effectiveColor={effectiveColor} effectiveAvatar={effectiveAvatar} onTaskClick={(taskId)=>setOpenTask(taskId)}/>
               ))}
             </div>
           </div>
