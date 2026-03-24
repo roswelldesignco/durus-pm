@@ -77,7 +77,18 @@ const PHASE_LABELS = {"1":"Wk 1-2","2":"Wk 3-4","3":"Mo 2"};
 const PRI_LABELS = {crit:"Critical",high:"High",med:"Medium"};
 const BRAND = "#BCF000";
 
-function uid() { return Math.random().toString(36).slice(2,10); }
+const TEAM_MEMBERS = [
+  {name:"Rene Suarez",initials:"RS",title:"CEO / Owner",color:"#534AB7",bg:"#EEEDFE",ids:["l2","sa1","sa3","sa4","sa5","s6","a7","m9"]},
+  {name:"Jesse Smith",initials:"JS",title:"VP — Systems & Ops",color:"#185FA5",bg:"#E6F1FB",ids:["o2","o3","o4","o5","o7","s1","s2","s3","s4","s5","s7","m1","m4","sa2","ad3","ad4","l7","l8","o1"]},
+  {name:"Robert Haugan",initials:"RH",title:"Legal Counsel",color:"#3B6D11",bg:"#EAF3DE",ids:["l1","l4","l5","l6","l7","l8","l9","a3","o1","ad1","ad2"]},
+  {name:"Caleb Troy",initials:"CT",title:"Accounting",color:"#854F0B",bg:"#FAEEDA",ids:["l2","l3","a1","a2","a3","a4","a5","a6","a7","sa4"]},
+  {name:"Cat Sullins",initials:"CS",title:"Ops & Brand Coord.",color:"#993C1D",bg:"#FAECE7",ids:["o2","o3","o5","o6","m6","a5","ad5"]},
+  {name:"Lupita Perez",initials:"LP",title:"Brand & Marketing",color:"#993556",bg:"#FBEAF0",ids:["m2","m3","m4","m5","m6","m7","m8","sa2"]},
+  {name:"Cleo Parra",initials:"CP",title:"Consultant",color:"#5F5E5A",bg:"#F1EFE8",ids:["m7","m9"]},
+  {name:"Joey Ham",initials:"JH",title:"Contractor Partner",color:"#0F6E56",bg:"#E1F5EE",ids:["l6","o1","o4","sa1","sa5","ad1"]},
+];
+
+function uid(){return Math.random().toString(36).slice(2,10);}
 function rowToTask(row){return{id:row.id,t:row.title,note:row.note||"",owner:row.owner||"",phase:row.phase||"1",p:row.priority||"high",status:row.status||"open",comments:row.comments||[]};}
 function taskToRow(task,deptId){return{id:task.id,dept_id:deptId,title:task.t,note:task.note||"",owner:task.owner||"",phase:task.phase,priority:task.p,status:task.status,comments:task.comments||[],updated_at:new Date().toISOString()};}
 
@@ -119,9 +130,8 @@ function Avatar({name,size=28}){
   const initials=name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
   const colors=["#534AB7","#185FA5","#0F6E56","#993C1D","#639922","#993556","#854F0B","#5F5E5A"];
   const color=colors[name.charCodeAt(0)%colors.length];
-  const bg=color+"22";
   return(
-    <div style={{width:size,height:size,borderRadius:"50%",background:bg,color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:size*0.38,fontWeight:600,flexShrink:0}}>
+    <div style={{width:size,height:size,borderRadius:"50%",background:color+"22",color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:size*0.38,fontWeight:600,flexShrink:0}}>
       {initials}
     </div>
   );
@@ -130,61 +140,18 @@ function Avatar({name,size=28}){
 function ChangelogFeed({theme,onTaskClick}){
   const [entries,setEntries]=useState([]);
   const [loading,setLoading]=useState(true);
-
   async function load(){
     try{
-      const{data}=await supabase
-        .from("changelog")
-        .select("*")
-        .order("created_at",{ascending:false})
-        .limit(30);
+      const{data}=await supabase.from("changelog").select("*").order("created_at",{ascending:false}).limit(30);
       if(data)setEntries(data);
     }catch(e){console.error(e);}
     setLoading(false);
   }
-
-  useEffect(()=>{
-    load();
-    const interval=setInterval(load,15000);
-    return()=>clearInterval(interval);
-  },[]);
-
-  const actionIcon={
-    completed:"✓",
-    reopened:"↩",
-    updated:"✎",
-    commented:"💬",
-    added:"＋",
-    deleted:"✕",
-    status:"◎",
-  };
-
-  const actionColor={
-    completed:"#3B6D11",
-    reopened:"#854F0B",
-    updated:"#185FA5",
-    commented:"#534AB7",
-    added:BRAND,
-    deleted:"#993C1D",
-    status:"#185FA5",
-  };
-
-  if(loading){
-    return(
-      <div style={{padding:"20px 16px",textAlign:"center"}}>
-        <span style={{fontSize:12,color:theme.textTertiary}}>Loading activity...</span>
-      </div>
-    );
-  }
-
-  if(!entries.length){
-    return(
-      <div style={{padding:"20px 16px",textAlign:"center"}}>
-        <span style={{fontSize:12,color:theme.textTertiary}}>No activity yet. Changes will appear here as the team makes updates.</span>
-      </div>
-    );
-  }
-
+  useEffect(()=>{load();const i=setInterval(load,15000);return()=>clearInterval(i);},[]);
+  const actionIcon={completed:"✓",reopened:"↩",updated:"✎",commented:"💬",added:"＋",deleted:"✕",status:"◎"};
+  const actionColor={completed:"#3B6D11",reopened:"#854F0B",updated:"#185FA5",commented:"#534AB7",added:BRAND,deleted:"#993C1D",status:"#185FA5"};
+  if(loading)return <div style={{padding:"20px 16px",textAlign:"center"}}><span style={{fontSize:12,color:theme.textTertiary}}>Loading activity...</span></div>;
+  if(!entries.length)return <div style={{padding:"20px 16px",textAlign:"center"}}><span style={{fontSize:12,color:theme.textTertiary}}>No activity yet. Changes will appear here as the team makes updates.</span></div>;
   return(
     <div>
       {entries.map((e,i)=>{
@@ -199,13 +166,13 @@ function ChangelogFeed({theme,onTaskClick}){
                 <span style={{fontSize:13,fontWeight:500,color:theme.textPrimary}}>{e.user_name}</span>
                 <span style={{fontSize:12,color:theme.textSecondary,lineHeight:1.4}}>
                   <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:16,height:16,borderRadius:"50%",background:color+"22",color,fontSize:9,fontWeight:700,marginRight:4,flexShrink:0,verticalAlign:"middle"}}>{icon}</span>
-                  {e.action === "completed" && <span>marked <strong style={{color:theme.textPrimary}}>{e.task_title}</strong> as done</span>}
-                  {e.action === "reopened" && <span>reopened <strong style={{color:theme.textPrimary}}>{e.task_title}</strong></span>}
-                  {e.action === "updated" && <span>updated <strong style={{color:theme.textPrimary}}>{e.task_title}</strong></span>}
-                  {e.action === "commented" && <span>commented on <strong style={{color:theme.textPrimary}}>{e.task_title}</strong></span>}
-                  {e.action === "added" && <span>added task <strong style={{color:theme.textPrimary}}>{e.task_title}</strong></span>}
-                  {e.action === "deleted" && <span>deleted task <strong style={{color:theme.textPrimary}}>{e.task_title}</strong></span>}
-                  {e.action === "status" && <span>changed status of <strong style={{color:theme.textPrimary}}>{e.task_title}</strong></span>}
+                  {e.action==="completed"&&<span>marked <strong style={{color:theme.textPrimary}}>{e.task_title}</strong> as done</span>}
+                  {e.action==="reopened"&&<span>reopened <strong style={{color:theme.textPrimary}}>{e.task_title}</strong></span>}
+                  {e.action==="updated"&&<span>updated <strong style={{color:theme.textPrimary}}>{e.task_title}</strong></span>}
+                  {e.action==="commented"&&<span>commented on <strong style={{color:theme.textPrimary}}>{e.task_title}</strong></span>}
+                  {e.action==="added"&&<span>added task <strong style={{color:theme.textPrimary}}>{e.task_title}</strong></span>}
+                  {e.action==="deleted"&&<span>deleted task <strong style={{color:theme.textPrimary}}>{e.task_title}</strong></span>}
+                  {e.action==="status"&&<span>changed status of <strong style={{color:theme.textPrimary}}>{e.task_title}</strong></span>}
                 </span>
               </div>
               {e.detail&&<div style={{fontSize:11,color:theme.textTertiary,marginTop:2,lineHeight:1.4,fontStyle:"italic"}}>"{e.detail}"</div>}
@@ -217,6 +184,89 @@ function ChangelogFeed({theme,onTaskClick}){
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// ── Team member card with expandable task list ────────────────────────────────
+function TeamCard({person, allTasks, theme, currentUser, onTaskClick}){
+  const [expanded, setExpanded] = useState(person.name === currentUser);
+  const mt = allTasks.filter(t => person.ids.includes(t.id));
+  const dd = mt.filter(t => t.status === "done").length;
+  const cr = mt.filter(t => t.p === "crit" && t.status !== "done").length;
+  const bl = mt.filter(t => t.status === "blocked").length;
+  const pp = mt.length ? Math.round(dd/mt.length*100) : 0;
+  const isMe = person.name === currentUser;
+
+  // Group tasks by status: open/in-progress/blocked first, then done
+  const openTasks = mt.filter(t => t.status !== "done");
+  const doneTasks = mt.filter(t => t.status === "done");
+  const sortedTasks = [...openTasks, ...doneTasks];
+
+  return(
+    <div style={{background:theme.surface,border:`0.5px solid ${isMe?BRAND:theme.border}`,borderRadius:12,overflow:"hidden",boxShadow:isMe?`0 0 0 1px ${BRAND}22`:undefined}}>
+      {/* Card header — always visible, click to expand */}
+      <div onClick={()=>setExpanded(e=>!e)} style={{padding:"12px 14px",cursor:"pointer",display:"flex",alignItems:"center",gap:12}}>
+        <div style={{width:40,height:40,borderRadius:"50%",background:person.bg,color:person.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:600,flexShrink:0,position:"relative"}}>
+          {person.initials}
+          {isMe&&<div style={{position:"absolute",bottom:0,right:0,width:10,height:10,borderRadius:"50%",background:BRAND,border:`2px solid ${theme.surface}`}}/>}
+        </div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <span style={{fontSize:13,fontWeight:500,color:theme.textPrimary}}>{person.name}</span>
+            {isMe&&<span style={{fontSize:9,fontWeight:600,background:BRAND,color:"#2c2c2a",borderRadius:6,padding:"1px 5px",textTransform:"uppercase",letterSpacing:".04em"}}>You</span>}
+          </div>
+          <div style={{fontSize:11,color:theme.textTertiary,marginBottom:5}}>{person.title}</div>
+          <div style={{height:3,background:theme.surface2,borderRadius:2,overflow:"hidden",marginBottom:5}}>
+            <div style={{height:"100%",width:`${pp}%`,background:person.color,borderRadius:2,transition:"width .4s"}}/>
+          </div>
+          <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+            <span style={{fontSize:10,padding:"2px 7px",borderRadius:10,background:theme.surface2,color:theme.textSecondary}}>{dd}/{mt.length} done</span>
+            {cr>0&&<span style={{fontSize:10,padding:"2px 7px",borderRadius:10,background:"#FAECE7",color:"#993C1D",fontWeight:600}}>{cr} critical</span>}
+            {bl>0&&<span style={{fontSize:10,padding:"2px 7px",borderRadius:10,background:"#FAEEDA",color:"#854F0B",fontWeight:600}}>{bl} blocked</span>}
+          </div>
+        </div>
+        <div style={{fontSize:11,color:theme.textTertiary,flexShrink:0,transition:"transform .2s",transform:expanded?"rotate(90deg)":"none"}}>▶</div>
+      </div>
+
+      {/* Expandable task list */}
+      {expanded&&(
+        <div style={{borderTop:`0.5px solid ${theme.border}`}}>
+          {sortedTasks.length===0&&(
+            <div style={{padding:"12px 14px",fontSize:12,color:theme.textTertiary}}>No tasks assigned.</div>
+          )}
+          {sortedTasks.map((task,i)=>{
+            const isDone = task.status === "done";
+            const statusColors = {
+              open:{dot:"#888780"},
+              "in-progress":{dot:"#185FA5"},
+              blocked:{dot:"#993C1D"},
+              done:{dot:"#3B6D11"},
+            };
+            const dotColor = statusColors[task.status]?.dot || "#888780";
+            return(
+              <div key={task.id}
+                onClick={()=>onTaskClick(task.id)}
+                style={{display:"flex",alignItems:"center",gap:10,padding:"9px 14px",borderBottom:i<sortedTasks.length-1?`0.5px solid ${theme.border}`:"none",cursor:"pointer",background:"transparent",transition:"background .1s"}}
+                onMouseEnter={e=>e.currentTarget.style.background=theme.surface2}
+                onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                {/* Status dot */}
+                <div style={{width:7,height:7,borderRadius:"50%",background:isDone?dotColor:dotColor,flexShrink:0,opacity:isDone?0.4:1}}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12,color:isDone?theme.textTertiary:theme.textPrimary,textDecoration:isDone?"line-through":"none",lineHeight:1.35,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{task.t}</div>
+                  <div style={{display:"flex",gap:4,marginTop:3,flexWrap:"wrap",alignItems:"center"}}>
+                    <PriBadge p={task.p}/>
+                    <PhasePill phase={parseInt(task.phase)}/>
+                    {task.status!=="open"&&<StatusBadge status={task.status}/>}
+                    {task.deptName&&<span style={{fontSize:10,color:theme.textTertiary}}>{task.deptName}</span>}
+                  </div>
+                </div>
+                <span style={{fontSize:12,color:theme.textTertiary,flexShrink:0}}>›</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -415,14 +465,7 @@ export default function App(){
   const logChange=useCallback(async(action,taskTitle,deptName,detail="")=>{
     if(!currentUser)return;
     try{
-      await supabase.from("changelog").insert({
-        id:uid(),
-        user_name:currentUser,
-        action,
-        task_title:taskTitle||null,
-        dept_name:deptName||null,
-        detail:detail||null,
-      });
+      await supabase.from("changelog").insert({id:uid(),user_name:currentUser,action,task_title:taskTitle||null,dept_name:deptName||null,detail:detail||null});
     }catch(e){console.error(e);}
   },[currentUser]);
 
@@ -440,18 +483,11 @@ export default function App(){
   const toggleStatus=(taskId)=>{
     let changed,deptId,deptName;
     const newDepts=depts.map(d=>({...d,tasks:d.tasks.map(t=>{
-      if(t.id===taskId){
-        changed={...t,status:t.status==="done"?"open":"done"};
-        deptId=d.id;deptName=d.name;
-        return changed;
-      }
+      if(t.id===taskId){changed={...t,status:t.status==="done"?"open":"done"};deptId=d.id;deptName=d.name;return changed;}
       return t;
     })}));
     setDepts(newDepts);
-    if(changed&&deptId){
-      persistTask(changed,deptId);
-      logChange(changed.status==="done"?"completed":"reopened",changed.t,deptName);
-    }
+    if(changed&&deptId){persistTask(changed,deptId);logChange(changed.status==="done"?"completed":"reopened",changed.t,deptName);}
   };
 
   const saveTask=(updated,originalTask,deptName)=>{
@@ -463,15 +499,9 @@ export default function App(){
     setDepts(newDepts);
     if(deptId){
       persistTask(updated,deptId);
-      // Check what changed
-      if(originalTask&&updated.status!==originalTask.status){
-        logChange("status",updated.t,deptName,`${originalTask.status} → ${updated.status}`);
-      } else if(originalTask&&updated.comments?.length>(originalTask.comments?.length||0)){
-        const lastComment=updated.comments[updated.comments.length-1];
-        logChange("commented",updated.t,deptName,lastComment?.text?.slice(0,80));
-      } else {
-        logChange("updated",updated.t,deptName);
-      }
+      if(originalTask&&updated.status!==originalTask.status){logChange("status",updated.t,deptName,`${originalTask.status} → ${updated.status}`);}
+      else if(originalTask&&updated.comments?.length>(originalTask.comments?.length||0)){const lc=updated.comments[updated.comments.length-1];logChange("commented",updated.t,deptName,lc?.text?.slice(0,80));}
+      else{logChange("updated",updated.t,deptName);}
     }
     setOpenTask(null);
   };
@@ -491,11 +521,7 @@ export default function App(){
     setShowAddTask(false);
   };
 
-  const toggleDark=()=>{
-    const next=!darkMode;
-    setDarkMode(next);
-    localStorage.setItem("durus_dark",next?"1":"0");
-  };
+  const toggleDark=()=>{const next=!darkMode;setDarkMode(next);localStorage.setItem("durus_dark",next?"1":"0");};
 
   const allTasks=depts?depts.flatMap(d=>d.tasks.map(t=>({...t,deptColor:d.color,deptName:d.name,deptId:d.id}))):[]; 
   const total=allTasks.length;
@@ -519,9 +545,7 @@ export default function App(){
     return(
       <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:theme.bg,padding:20}}>
         <div style={{background:theme.surface,borderRadius:16,padding:"32px 24px",maxWidth:360,width:"100%",border:`0.5px solid ${theme.border}`}}>
-          <div style={{textAlign:"center",marginBottom:24}}>
-            <img src="/logo.png" alt="Durus Roofing" style={{height:52,objectFit:"contain"}}/>
-          </div>
+          <div style={{textAlign:"center",marginBottom:24}}><img src="/logo.png" alt="Durus Roofing" style={{height:52,objectFit:"contain"}}/></div>
           <div style={{fontSize:20,fontWeight:500,color:theme.textPrimary,marginBottom:8}}>Welcome to the project tracker</div>
           <div style={{fontSize:14,color:theme.textSecondary,marginBottom:24,lineHeight:1.6}}>Enter your name so your teammates know who is making updates.</div>
           <div style={{fontSize:11,color:theme.textTertiary,marginBottom:6,textTransform:"uppercase",letterSpacing:".05em"}}>Your name</div>
@@ -567,7 +591,6 @@ export default function App(){
   return(
     <div style={{minHeight:"100vh",background:theme.bg,fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",paddingBottom:isMobile?72:0}}>
 
-      {/* Top bar */}
       <div style={{background:theme.surface,borderBottom:`0.5px solid ${theme.border}`,padding:isMobile?"10px 14px":"12px 20px",position:"sticky",top:0,zIndex:100}}>
         <div style={{maxWidth:980,margin:"0 auto"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:isMobile?0:10}}>
@@ -606,10 +629,8 @@ export default function App(){
 
       <div style={{maxWidth:980,margin:"0 auto",padding:isMobile?"12px 12px":"20px 16px"}}>
 
-        {/* DASHBOARD */}
         {activeView==="dashboard"&&(
           <div>
-            {/* Metrics */}
             <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,minmax(0,1fr))",gap:isMobile?8:10,marginBottom:14}}>
               {[
                 {label:"Overall",val:`${pct}%`,sub:`${done}/${total} tasks`},
@@ -624,8 +645,6 @@ export default function App(){
                 </div>
               ))}
             </div>
-
-            {/* Phase progress + critical blockers */}
             <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"minmax(0,1.4fr) minmax(0,1fr)",gap:isMobile?8:14,marginBottom:isMobile?8:14}}>
               <div style={{background:theme.surface,border:`0.5px solid ${theme.border}`,borderRadius:12,padding:"14px 16px"}}>
                 <div style={{fontSize:11,fontWeight:600,color:theme.textPrimary,marginBottom:12,textTransform:"uppercase",letterSpacing:".05em"}}>Phase progress</div>
@@ -663,8 +682,6 @@ export default function App(){
                 }
               </div>
             </div>
-
-            {/* Dept overview */}
             <div style={{background:theme.surface,border:`0.5px solid ${theme.border}`,borderRadius:12,padding:"14px 16px",marginBottom:isMobile?8:14}}>
               <div style={{fontSize:11,fontWeight:600,color:theme.textPrimary,marginBottom:12,textTransform:"uppercase",letterSpacing:".05em"}}>Department overview</div>
               <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fill,minmax(200px,1fr))",gap:8}}>
@@ -690,8 +707,6 @@ export default function App(){
                 })}
               </div>
             </div>
-
-            {/* ── CHANGELOG FEED ── */}
             <div style={{background:theme.surface,border:`0.5px solid ${theme.border}`,borderRadius:12,overflow:"hidden"}}>
               <div style={{padding:"12px 16px",borderBottom:`0.5px solid ${theme.border}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                 <div style={{fontSize:11,fontWeight:600,color:theme.textPrimary,textTransform:"uppercase",letterSpacing:".05em"}}>Team activity</div>
@@ -709,7 +724,6 @@ export default function App(){
           </div>
         )}
 
-        {/* TASKS */}
         {activeView==="tasks"&&(
           <div>
             <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10,alignItems:"center"}}>
@@ -751,9 +765,7 @@ export default function App(){
                               <div style={{flex:1,minWidth:0}}>
                                 <div style={{fontSize:13,color:task.status==="done"?theme.textTertiary:theme.textPrimary,textDecoration:task.status==="done"?"line-through":"none",lineHeight:1.4,marginBottom:5}}>{task.t}</div>
                                 <div style={{display:"flex",gap:5,flexWrap:"wrap",alignItems:"center"}}>
-                                  <PriBadge p={task.p}/>
-                                  <PhasePill phase={parseInt(task.phase)}/>
-                                  <StatusBadge status={task.status}/>
+                                  <PriBadge p={task.p}/><PhasePill phase={parseInt(task.phase)}/><StatusBadge status={task.status}/>
                                   {task.owner&&<span style={{fontSize:10,color:theme.textTertiary}}>{task.owner}</span>}
                                   {(task.comments||[]).length>0&&<span style={{fontSize:10,color:"#185FA5"}}>{task.comments.length} comment{task.comments.length>1?"s":""}</span>}
                                 </div>
@@ -787,7 +799,6 @@ export default function App(){
           </div>
         )}
 
-        {/* TIMELINE */}
         {activeView==="timeline"&&(
           isMobile?(
             <div style={{background:theme.surface,border:`0.5px solid ${theme.border}`,borderRadius:12,padding:"24px 16px",textAlign:"center"}}>
@@ -828,46 +839,27 @@ export default function App(){
           )
         )}
 
-        {/* TEAM */}
+        {/* TEAM — expandable cards */}
         {activeView==="team"&&(
-          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(260px,1fr))",gap:isMobile?8:12}}>
-            {[
-              {name:"Rene Suarez",initials:"RS",title:"CEO / Owner",color:"#534AB7",bg:"#EEEDFE",ids:["l2","sa1","sa3","sa4","sa5","s6","a7","m9"]},
-              {name:"Jesse Smith",initials:"JS",title:"VP — Systems & Ops",color:"#185FA5",bg:"#E6F1FB",ids:["o2","o3","o4","o5","o7","s1","s2","s3","s4","s5","s7","m1","m4","sa2","ad3","ad4","l7","l8","o1"]},
-              {name:"Robert Haugan",initials:"RH",title:"Legal Counsel",color:"#3B6D11",bg:"#EAF3DE",ids:["l1","l4","l5","l6","l7","l8","l9","a3","o1","ad1","ad2"]},
-              {name:"Caleb Troy",initials:"CT",title:"Accounting",color:"#854F0B",bg:"#FAEEDA",ids:["l2","l3","a1","a2","a3","a4","a5","a6","a7","sa4"]},
-              {name:"Cat Sullins",initials:"CS",title:"Ops & Brand Coord.",color:"#993C1D",bg:"#FAECE7",ids:["o2","o3","o5","o6","m6","a5","ad5"]},
-              {name:"Lupita Perez",initials:"LP",title:"Brand & Marketing",color:"#993556",bg:"#FBEAF0",ids:["m2","m3","m4","m5","m6","m7","m8","sa2"]},
-              {name:"Cleo Parra",initials:"CP",title:"Consultant",color:"#5F5E5A",bg:"#F1EFE8",ids:["m7","m9"]},
-              {name:"Joey Ham",initials:"JH",title:"Contractor Partner",color:"#0F6E56",bg:"#E1F5EE",ids:["l6","o1","o4","sa1","sa5","ad1"]},
-            ].map(p=>{
-              const mt=allTasks.filter(task=>p.ids.includes(task.id));
-              const dd=mt.filter(task=>task.status==="done").length;
-              const cr=mt.filter(task=>task.p==="crit"&&task.status!=="done").length;
-              const bl=mt.filter(task=>task.status==="blocked").length;
-              const pp=mt.length?Math.round(dd/mt.length*100):0;
-              return(
-                <div key={p.name} style={{background:theme.surface,border:`0.5px solid ${theme.border}`,borderRadius:12,padding:"12px 14px",display:"flex",alignItems:"center",gap:12}}>
-                  <div style={{width:40,height:40,borderRadius:"50%",background:p.bg,color:p.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:600,flexShrink:0}}>{p.initials}</div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:13,fontWeight:500,color:theme.textPrimary}}>{p.name}</div>
-                    <div style={{fontSize:11,color:theme.textTertiary,marginBottom:5}}>{p.title}</div>
-                    <div style={{height:3,background:theme.surface2,borderRadius:2,overflow:"hidden",marginBottom:5}}>
-                      <div style={{height:"100%",width:`${pp}%`,background:p.color,borderRadius:2}}/>
-                    </div>
-                    <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
-                      <span style={{fontSize:10,padding:"2px 7px",borderRadius:10,background:theme.surface2,color:theme.textSecondary}}>{dd}/{mt.length}</span>
-                      {cr>0&&<span style={{fontSize:10,padding:"2px 7px",borderRadius:10,background:"#FAECE7",color:"#993C1D",fontWeight:600}}>{cr} crit</span>}
-                      {bl>0&&<span style={{fontSize:10,padding:"2px 7px",borderRadius:10,background:"#FAEEDA",color:"#854F0B",fontWeight:600}}>{bl} blocked</span>}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+          <div>
+            <div style={{fontSize:12,color:theme.textTertiary,marginBottom:12}}>
+              Click any team member to see their tasks. Your card is highlighted and expanded by default.
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {TEAM_MEMBERS.map(p=>(
+                <TeamCard
+                  key={p.name}
+                  person={p}
+                  allTasks={allTasks}
+                  theme={theme}
+                  currentUser={currentUser}
+                  onTaskClick={(taskId)=>setOpenTask(taskId)}
+                />
+              ))}
+            </div>
           </div>
         )}
 
-        {/* RISKS */}
         {activeView==="risks"&&(
           <div>
             {[
@@ -892,7 +884,6 @@ export default function App(){
         )}
       </div>
 
-      {/* Mobile bottom tab bar */}
       {isMobile&&(
         <div style={{position:"fixed",bottom:0,left:0,right:0,background:theme.surface,borderTop:`0.5px solid ${theme.border}`,display:"flex",zIndex:100,paddingBottom:"env(safe-area-inset-bottom)"}}>
           {TAB_VIEWS.map((id,i)=>(
@@ -904,7 +895,6 @@ export default function App(){
         </div>
       )}
 
-      {/* Modals */}
       {openTask&&openTaskObj&&(
         <TaskModal
           task={openTaskObj}
