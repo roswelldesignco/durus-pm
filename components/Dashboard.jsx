@@ -74,13 +74,21 @@ const DEFAULT_DEPTS = [
 ];
 
 const PHASE_LABELS = {"1":"Wk 1-2","2":"Wk 3-4","3":"Mo 2"};
-const PHASE_LABELS_FULL = {"1":"Week 1-2","2":"Week 3-4","3":"Month 2"};
 const PRI_LABELS = {crit:"Critical",high:"High",med:"Medium"};
 const BRAND = "#BCF000";
 
 function uid() { return Math.random().toString(36).slice(2,10); }
 function rowToTask(row){return{id:row.id,t:row.title,note:row.note||"",owner:row.owner||"",phase:row.phase||"1",p:row.priority||"high",status:row.status||"open",comments:row.comments||[]};}
 function taskToRow(task,deptId){return{id:task.id,dept_id:deptId,title:task.t,note:task.note||"",owner:task.owner||"",phase:task.phase,priority:task.p,status:task.status,comments:task.comments||[],updated_at:new Date().toISOString()};}
+
+function timeAgo(ts){
+  const s=Math.floor((Date.now()-new Date(ts))/1000);
+  if(s<60)return"just now";
+  if(s<3600)return`${Math.floor(s/60)}m ago`;
+  if(s<86400)return`${Math.floor(s/3600)}h ago`;
+  if(s<604800)return`${Math.floor(s/86400)}d ago`;
+  return new Date(ts).toLocaleDateString("en-US",{month:"short",day:"numeric"});
+}
 
 function useIsMobile(){
   const [mobile,setMobile]=useState(false);
@@ -105,6 +113,112 @@ function StatusBadge({status}){
   const m={open:{bg:"#F1EFE8",color:"#5F5E5A",label:"Open"},"in-progress":{bg:"#E6F1FB",color:"#185FA5",label:"In progress"},blocked:{bg:"#FAECE7",color:"#993C1D",label:"Blocked"},done:{bg:"#EAF3DE",color:"#3B6D11",label:"Done"}};
   const s=m[status]||m.open;
   return <span style={{background:s.bg,color:s.color,fontSize:10,fontWeight:600,borderRadius:4,padding:"2px 7px",whiteSpace:"nowrap"}}>{s.label}</span>;
+}
+
+function Avatar({name,size=28}){
+  const initials=name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+  const colors=["#534AB7","#185FA5","#0F6E56","#993C1D","#639922","#993556","#854F0B","#5F5E5A"];
+  const color=colors[name.charCodeAt(0)%colors.length];
+  const bg=color+"22";
+  return(
+    <div style={{width:size,height:size,borderRadius:"50%",background:bg,color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:size*0.38,fontWeight:600,flexShrink:0}}>
+      {initials}
+    </div>
+  );
+}
+
+function ChangelogFeed({theme,onTaskClick}){
+  const [entries,setEntries]=useState([]);
+  const [loading,setLoading]=useState(true);
+
+  async function load(){
+    try{
+      const{data}=await supabase
+        .from("changelog")
+        .select("*")
+        .order("created_at",{ascending:false})
+        .limit(30);
+      if(data)setEntries(data);
+    }catch(e){console.error(e);}
+    setLoading(false);
+  }
+
+  useEffect(()=>{
+    load();
+    const interval=setInterval(load,15000);
+    return()=>clearInterval(interval);
+  },[]);
+
+  const actionIcon={
+    completed:"✓",
+    reopened:"↩",
+    updated:"✎",
+    commented:"💬",
+    added:"＋",
+    deleted:"✕",
+    status:"◎",
+  };
+
+  const actionColor={
+    completed:"#3B6D11",
+    reopened:"#854F0B",
+    updated:"#185FA5",
+    commented:"#534AB7",
+    added:BRAND,
+    deleted:"#993C1D",
+    status:"#185FA5",
+  };
+
+  if(loading){
+    return(
+      <div style={{padding:"20px 16px",textAlign:"center"}}>
+        <span style={{fontSize:12,color:theme.textTertiary}}>Loading activity...</span>
+      </div>
+    );
+  }
+
+  if(!entries.length){
+    return(
+      <div style={{padding:"20px 16px",textAlign:"center"}}>
+        <span style={{fontSize:12,color:theme.textTertiary}}>No activity yet. Changes will appear here as the team makes updates.</span>
+      </div>
+    );
+  }
+
+  return(
+    <div>
+      {entries.map((e,i)=>{
+        const color=actionColor[e.action]||theme.textSecondary;
+        const icon=actionIcon[e.action]||"•";
+        return(
+          <div key={e.id} style={{display:"flex",gap:10,padding:"10px 16px",borderBottom:i<entries.length-1?`0.5px solid ${theme.border}`:"none",cursor:e.task_title?"pointer":"default"}}
+            onClick={()=>e.task_title&&onTaskClick&&onTaskClick(e)}>
+            <Avatar name={e.user_name} size={30}/>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{display:"flex",alignItems:"baseline",gap:6,flexWrap:"wrap"}}>
+                <span style={{fontSize:13,fontWeight:500,color:theme.textPrimary}}>{e.user_name}</span>
+                <span style={{fontSize:12,color:theme.textSecondary,lineHeight:1.4}}>
+                  <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:16,height:16,borderRadius:"50%",background:color+"22",color,fontSize:9,fontWeight:700,marginRight:4,flexShrink:0,verticalAlign:"middle"}}>{icon}</span>
+                  {e.action === "completed" && <span>marked <strong style={{color:theme.textPrimary}}>{e.task_title}</strong> as done</span>}
+                  {e.action === "reopened" && <span>reopened <strong style={{color:theme.textPrimary}}>{e.task_title}</strong></span>}
+                  {e.action === "updated" && <span>updated <strong style={{color:theme.textPrimary}}>{e.task_title}</strong></span>}
+                  {e.action === "commented" && <span>commented on <strong style={{color:theme.textPrimary}}>{e.task_title}</strong></span>}
+                  {e.action === "added" && <span>added task <strong style={{color:theme.textPrimary}}>{e.task_title}</strong></span>}
+                  {e.action === "deleted" && <span>deleted task <strong style={{color:theme.textPrimary}}>{e.task_title}</strong></span>}
+                  {e.action === "status" && <span>changed status of <strong style={{color:theme.textPrimary}}>{e.task_title}</strong></span>}
+                </span>
+              </div>
+              {e.detail&&<div style={{fontSize:11,color:theme.textTertiary,marginTop:2,lineHeight:1.4,fontStyle:"italic"}}>"{e.detail}"</div>}
+              <div style={{display:"flex",alignItems:"center",gap:6,marginTop:3}}>
+                {e.dept_name&&<span style={{fontSize:10,color:theme.textTertiary,background:theme.surface2,borderRadius:4,padding:"1px 6px"}}>{e.dept_name}</span>}
+                <span style={{fontSize:10,color:theme.textTertiary}}>{timeAgo(e.created_at)}</span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function TaskModal({task,deptColor,deptName,currentUser,onSave,onDelete,onClose,theme}){
@@ -298,6 +412,20 @@ export default function App(){
     return()=>clearInterval(interval);
   },[!!depts]);
 
+  const logChange=useCallback(async(action,taskTitle,deptName,detail="")=>{
+    if(!currentUser)return;
+    try{
+      await supabase.from("changelog").insert({
+        id:uid(),
+        user_name:currentUser,
+        action,
+        task_title:taskTitle||null,
+        dept_name:deptName||null,
+        detail:detail||null,
+      });
+    }catch(e){console.error(e);}
+  },[currentUser]);
+
   const persistTask=useCallback(async(task,deptId)=>{
     setSaving(true);
     try{await supabase.from("tasks").upsert(taskToRow(task,deptId));setLastSaved(new Date());}
@@ -310,35 +438,56 @@ export default function App(){
   },[]);
 
   const toggleStatus=(taskId)=>{
-    let changed,deptId;
+    let changed,deptId,deptName;
     const newDepts=depts.map(d=>({...d,tasks:d.tasks.map(t=>{
-      if(t.id===taskId){changed={...t,status:t.status==="done"?"open":"done"};deptId=d.id;return changed;}
+      if(t.id===taskId){
+        changed={...t,status:t.status==="done"?"open":"done"};
+        deptId=d.id;deptName=d.name;
+        return changed;
+      }
       return t;
     })}));
     setDepts(newDepts);
-    if(changed&&deptId)persistTask(changed,deptId);
+    if(changed&&deptId){
+      persistTask(changed,deptId);
+      logChange(changed.status==="done"?"completed":"reopened",changed.t,deptName);
+    }
   };
 
-  const saveTask=(updated)=>{
+  const saveTask=(updated,originalTask,deptName)=>{
     let deptId;
     const newDepts=depts.map(d=>{
       if(d.tasks.some(t=>t.id===updated.id)){deptId=d.id;return{...d,tasks:d.tasks.map(t=>t.id===updated.id?updated:t)};}
       return d;
     });
     setDepts(newDepts);
-    if(deptId)persistTask(updated,deptId);
+    if(deptId){
+      persistTask(updated,deptId);
+      // Check what changed
+      if(originalTask&&updated.status!==originalTask.status){
+        logChange("status",updated.t,deptName,`${originalTask.status} → ${updated.status}`);
+      } else if(originalTask&&updated.comments?.length>(originalTask.comments?.length||0)){
+        const lastComment=updated.comments[updated.comments.length-1];
+        logChange("commented",updated.t,deptName,lastComment?.text?.slice(0,80));
+      } else {
+        logChange("updated",updated.t,deptName);
+      }
+    }
     setOpenTask(null);
   };
 
-  const deleteTask=(taskId)=>{
+  const deleteTask=(taskId,taskTitle,deptName)=>{
     setDepts(depts.map(d=>({...d,tasks:d.tasks.filter(t=>t.id!==taskId)})));
     deleteTaskFromDB(taskId);
+    logChange("deleted",taskTitle,deptName);
     setOpenTask(null);
   };
 
   const addTask=(form)=>{
+    const dept=depts.find(d=>d.id===form.deptId);
     setDepts(depts.map(d=>d.id===form.deptId?{...d,tasks:[...d.tasks,form]}:d));
     persistTask(form,form.deptId);
+    logChange("added",form.t,dept?.name);
     setShowAddTask(false);
   };
 
@@ -366,7 +515,6 @@ export default function App(){
     return true;
   });
 
-  // Login screen
   if(!userSet){
     return(
       <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:theme.bg,padding:20}}>
@@ -401,7 +549,6 @@ export default function App(){
   const openTaskObj=openTask?allTasks.find(t=>t.id===openTask):null;
   const openTaskDept=openTask?depts.find(d=>d.tasks.some(t=>t.id===openTask)):null;
 
-  // Bottom tab bar for mobile
   const TAB_VIEWS=["dashboard","tasks","team","risks"];
   const TAB_LABELS=["Home","Tasks","Team","Risks"];
   const TAB_ICONS={
@@ -419,7 +566,7 @@ export default function App(){
 
   return(
     <div style={{minHeight:"100vh",background:theme.bg,fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",paddingBottom:isMobile?72:0}}>
-      
+
       {/* Top bar */}
       <div style={{background:theme.surface,borderBottom:`0.5px solid ${theme.border}`,padding:isMobile?"10px 14px":"12px 20px",position:"sticky",top:0,zIndex:100}}>
         <div style={{maxWidth:980,margin:"0 auto"}}>
@@ -439,7 +586,6 @@ export default function App(){
               </button>
             </div>
           </div>
-          {/* Desktop nav tabs — hidden on mobile */}
           {!isMobile&&(
             <div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:2}}>
               <NavBtn id="dashboard" label="Dashboard"/>
@@ -452,20 +598,18 @@ export default function App(){
         </div>
       </div>
 
-      {/* Sync status bar on mobile */}
       {isMobile&&(
         <div style={{background:theme.surface2,borderBottom:`0.5px solid ${theme.border}`,padding:"5px 14px",textAlign:"center"}}>
           <span style={{fontSize:11,color:theme.textTertiary}}>{saving?"Saving...":lastSaved?`Saved ${lastSaved.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`:"All changes sync to team"}</span>
         </div>
       )}
 
-      {/* Main content */}
       <div style={{maxWidth:980,margin:"0 auto",padding:isMobile?"12px 12px":"20px 16px"}}>
 
         {/* DASHBOARD */}
         {activeView==="dashboard"&&(
           <div>
-            {/* Metric cards — 2 col on mobile, 4 col on desktop */}
+            {/* Metrics */}
             <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,minmax(0,1fr))",gap:isMobile?8:10,marginBottom:14}}>
               {[
                 {label:"Overall",val:`${pct}%`,sub:`${done}/${total} tasks`},
@@ -481,7 +625,7 @@ export default function App(){
               ))}
             </div>
 
-            {/* Phase progress + critical — stacked on mobile */}
+            {/* Phase progress + critical blockers */}
             <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"minmax(0,1.4fr) minmax(0,1fr)",gap:isMobile?8:14,marginBottom:isMobile?8:14}}>
               <div style={{background:theme.surface,border:`0.5px solid ${theme.border}`,borderRadius:12,padding:"14px 16px"}}>
                 <div style={{fontSize:11,fontWeight:600,color:theme.textPrimary,marginBottom:12,textTransform:"uppercase",letterSpacing:".05em"}}>Phase progress</div>
@@ -521,7 +665,7 @@ export default function App(){
             </div>
 
             {/* Dept overview */}
-            <div style={{background:theme.surface,border:`0.5px solid ${theme.border}`,borderRadius:12,padding:"14px 16px"}}>
+            <div style={{background:theme.surface,border:`0.5px solid ${theme.border}`,borderRadius:12,padding:"14px 16px",marginBottom:isMobile?8:14}}>
               <div style={{fontSize:11,fontWeight:600,color:theme.textPrimary,marginBottom:12,textTransform:"uppercase",letterSpacing:".05em"}}>Department overview</div>
               <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fill,minmax(200px,1fr))",gap:8}}>
                 {depts.map(d=>{
@@ -546,13 +690,28 @@ export default function App(){
                 })}
               </div>
             </div>
+
+            {/* ── CHANGELOG FEED ── */}
+            <div style={{background:theme.surface,border:`0.5px solid ${theme.border}`,borderRadius:12,overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:`0.5px solid ${theme.border}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <div style={{fontSize:11,fontWeight:600,color:theme.textPrimary,textTransform:"uppercase",letterSpacing:".05em"}}>Team activity</div>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <div style={{width:6,height:6,borderRadius:"50%",background:BRAND,animation:"pulse 2s infinite"}}/>
+                  <span style={{fontSize:10,color:theme.textTertiary}}>Live</span>
+                </div>
+              </div>
+              <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}`}</style>
+              <ChangelogFeed theme={theme} onTaskClick={(entry)=>{
+                const task=allTasks.find(t=>t.t===entry.task_title);
+                if(task)setOpenTask(task.id);
+              }}/>
+            </div>
           </div>
         )}
 
         {/* TASKS */}
         {activeView==="tasks"&&(
           <div>
-            {/* Filters */}
             <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10,alignItems:"center"}}>
               <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search..." style={{padding:"7px 12px",borderRadius:12,fontSize:13,border:`0.5px solid ${theme.borderMid}`,outline:"none",color:theme.textPrimary,background:theme.inputBg,flex:1,minWidth:0}}/>
             </div>
@@ -564,7 +723,6 @@ export default function App(){
                 <button key={v} onClick={()=>setFilterPri(v)} style={{padding:"5px 11px",borderRadius:12,fontSize:11,border:"0.5px solid",borderColor:filterPri===v?BRAND:theme.borderMid,background:filterPri===v?BRAND:"transparent",color:filterPri===v?"#2c2c2a":theme.textSecondary,cursor:"pointer"}}>{l}</button>
               ))}
             </div>
-
             {depts.map(d=>{
               const tasks=filteredTasks.filter(task=>task.deptId===d.id);
               if(!tasks.length)return null;
@@ -585,7 +743,6 @@ export default function App(){
                     <div>
                       {tasks.map(task=>(
                         isMobile?(
-                          // Mobile task row — card style
                           <div key={task.id} style={{padding:"12px 14px",borderBottom:`0.5px solid ${theme.border}`,cursor:"pointer"}} onClick={()=>setOpenTask(task.id)}>
                             <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
                               <div onClick={e=>{e.stopPropagation();toggleStatus(task.id);}} style={{width:22,height:22,borderRadius:6,border:`1.5px solid ${task.status==="done"?"#3B6D11":theme.borderMid}`,background:task.status==="done"?"#3B6D11":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,cursor:"pointer",marginTop:1}}>
@@ -605,7 +762,6 @@ export default function App(){
                             </div>
                           </div>
                         ):(
-                          // Desktop task row — table style
                           <div key={task.id} style={{display:"grid",gridTemplateColumns:"20px 1fr 110px 80px 90px 80px",gap:8,alignItems:"start",padding:"8px 14px",borderBottom:`0.5px solid ${theme.border}`,cursor:"pointer"}}
                             onClick={()=>setOpenTask(task.id)}>
                             <div onClick={e=>{e.stopPropagation();toggleStatus(task.id);}} style={{width:16,height:16,borderRadius:4,border:`1.5px solid ${task.status==="done"?"#3B6D11":theme.borderMid}`,background:task.status==="done"?"#3B6D11":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,cursor:"pointer",marginTop:1}}>
@@ -631,11 +787,11 @@ export default function App(){
           </div>
         )}
 
-        {/* TIMELINE — desktop only, show message on mobile */}
+        {/* TIMELINE */}
         {activeView==="timeline"&&(
           isMobile?(
             <div style={{background:theme.surface,border:`0.5px solid ${theme.border}`,borderRadius:12,padding:"24px 16px",textAlign:"center"}}>
-              <div style={{fontSize:13,color:theme.textSecondary,lineHeight:1.6}}>The timeline view is best viewed on a larger screen. Rotate your device to landscape or open on desktop for the full Gantt chart.</div>
+              <div style={{fontSize:13,color:theme.textSecondary,lineHeight:1.6}}>The timeline view is best on a larger screen. Rotate your device to landscape or open on desktop for the full Gantt chart.</div>
             </div>
           ):(
             <div style={{background:theme.surface,border:`0.5px solid ${theme.border}`,borderRadius:12,padding:"16px 18px",overflowX:"auto"}}>
@@ -650,22 +806,14 @@ export default function App(){
                   </div>
                 </div>
                 {[
-                  {label:"Entity + EIN",start:0,dur:7,color:"#534AB7"},
-                  {label:"Insurance",start:0,dur:10,color:"#534AB7"},
-                  {label:"C39 / RMO confirm",start:0,dur:7,color:"#993C1D"},
-                  {label:"Contractor agreement",start:2,dur:5,color:"#534AB7"},
-                  {label:"ServiceTitan setup",start:3,dur:7,color:"#993C1D"},
-                  {label:"QBO setup",start:3,dur:5,color:"#0F6E56"},
-                  {label:"Domain + email",start:5,dur:3,color:"#993556"},
-                  {label:"Brand kit + website",start:7,dur:10,color:"#993556"},
-                  {label:"Google Business Profile",start:7,dur:5,color:"#993556"},
-                  {label:"Joey onboarded",start:5,dur:4,color:"#185FA5"},
-                  {label:"Dispatch workflow",start:10,dur:5,color:"#185FA5"},
-                  {label:"ST pipeline config",start:14,dur:5,color:"#993C1D"},
-                  {label:"ST + QBO connected",start:14,dur:5,color:"#0F6E56"},
-                  {label:"First job dispatched",start:21,dur:3,color:BRAND},
-                  {label:"Google LSA live",start:28,dur:5,color:"#993556"},
-                  {label:"2nd contractor",start:28,dur:10,color:"#185FA5"},
+                  {label:"Entity + EIN",start:0,dur:7,color:"#534AB7"},{label:"Insurance",start:0,dur:10,color:"#534AB7"},
+                  {label:"C39 / RMO confirm",start:0,dur:7,color:"#993C1D"},{label:"Contractor agreement",start:2,dur:5,color:"#534AB7"},
+                  {label:"ServiceTitan setup",start:3,dur:7,color:"#993C1D"},{label:"QBO setup",start:3,dur:5,color:"#0F6E56"},
+                  {label:"Domain + email",start:5,dur:3,color:"#993556"},{label:"Brand kit + website",start:7,dur:10,color:"#993556"},
+                  {label:"Google Business Profile",start:7,dur:5,color:"#993556"},{label:"Joey onboarded",start:5,dur:4,color:"#185FA5"},
+                  {label:"Dispatch workflow",start:10,dur:5,color:"#185FA5"},{label:"ST pipeline config",start:14,dur:5,color:"#993C1D"},
+                  {label:"ST + QBO connected",start:14,dur:5,color:"#0F6E56"},{label:"First job dispatched",start:21,dur:3,color:BRAND},
+                  {label:"Google LSA live",start:28,dur:5,color:"#993556"},{label:"2nd contractor",start:28,dur:10,color:"#185FA5"},
                   {label:"Ins. adj. meetings",start:28,dur:14,color:"#993C1D"},
                 ].map((g,i)=>(
                   <div key={i} style={{display:"grid",gridTemplateColumns:"140px 1fr",gap:8,alignItems:"center",padding:"3px 0",borderBottom:`0.5px solid ${theme.border}`}}>
@@ -758,7 +906,16 @@ export default function App(){
 
       {/* Modals */}
       {openTask&&openTaskObj&&(
-        <TaskModal task={openTaskObj} deptColor={openTaskDept?.color||"#888780"} deptName={openTaskDept?.name||""} currentUser={currentUser} onSave={saveTask} onDelete={deleteTask} onClose={()=>setOpenTask(null)} theme={theme}/>
+        <TaskModal
+          task={openTaskObj}
+          deptColor={openTaskDept?.color||"#888780"}
+          deptName={openTaskDept?.name||""}
+          currentUser={currentUser}
+          onSave={(updated)=>saveTask(updated,openTaskObj,openTaskDept?.name)}
+          onDelete={(id)=>deleteTask(id,openTaskObj?.t,openTaskDept?.name)}
+          onClose={()=>setOpenTask(null)}
+          theme={theme}
+        />
       )}
       {showAddTask&&(
         <AddTaskModal depts={depts} onSave={addTask} onClose={()=>setShowAddTask(false)} theme={theme}/>
