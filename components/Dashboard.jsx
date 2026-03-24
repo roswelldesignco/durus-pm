@@ -137,6 +137,74 @@ function Avatar({name,size=28}){
   );
 }
 
+// ── Google Sign-In Screen ─────────────────────────────────────────────────────
+function SignInScreen({theme}){
+  const [loading,setLoading]=useState(false);
+  const [error,setError]=useState("");
+
+  const signIn=async()=>{
+    setLoading(true);
+    setError("");
+    const{error}=await supabase.auth.signInWithOAuth({
+      provider:"google",
+      options:{redirectTo:window.location.origin},
+    });
+    if(error){setError(error.message);setLoading(false);}
+  };
+
+  return(
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:theme.bg,padding:20}}>
+      <div style={{background:theme.surface,borderRadius:16,padding:"40px 32px",maxWidth:380,width:"100%",border:`0.5px solid ${theme.border}`,textAlign:"center"}}>
+        <div style={{marginBottom:28}}>
+          <img src="/logo.png" alt="Durus Roofing" style={{height:56,objectFit:"contain"}}/>
+        </div>
+        <div style={{fontSize:22,fontWeight:500,color:theme.textPrimary,marginBottom:8}}>Project tracker</div>
+        <div style={{fontSize:14,color:theme.textSecondary,marginBottom:32,lineHeight:1.6}}>Sign in with your Google account to access the team dashboard.</div>
+
+        <button onClick={signIn} disabled={loading}
+          style={{width:"100%",padding:"13px 20px",borderRadius:10,border:`0.5px solid ${theme.borderMid}`,background:loading?"#d3d1c7":theme.surface,color:theme.textPrimary,fontSize:15,fontWeight:500,cursor:loading?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:12,transition:"background .15s"}}>
+          {/* Google G icon */}
+          <svg width="20" height="20" viewBox="0 0 24 24">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+          </svg>
+          {loading?"Signing in...":"Sign in with Google"}
+        </button>
+
+        {error&&<div style={{marginTop:14,fontSize:12,color:"#993C1D",background:"#FAECE7",borderRadius:8,padding:"8px 12px"}}>{error}</div>}
+
+        <div style={{marginTop:24,fontSize:11,color:theme.textTertiary,lineHeight:1.6}}>
+          Access is restricted to approved team members only. Contact Rene or Jesse to be added.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Access Denied Screen ──────────────────────────────────────────────────────
+function AccessDenied({email,theme,onSignOut}){
+  return(
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:theme.bg,padding:20}}>
+      <div style={{background:theme.surface,borderRadius:16,padding:"40px 32px",maxWidth:380,width:"100%",border:`0.5px solid #F0997B`,textAlign:"center"}}>
+        <div style={{marginBottom:20}}><img src="/logo.png" alt="Durus Roofing" style={{height:48,objectFit:"contain"}}/></div>
+        <div style={{fontSize:18,fontWeight:500,color:"#993C1D",marginBottom:8}}>Access not approved</div>
+        <div style={{fontSize:13,color:theme.textSecondary,marginBottom:6,lineHeight:1.6}}>
+          <strong style={{color:theme.textPrimary}}>{email}</strong> is not on the approved team list.
+        </div>
+        <div style={{fontSize:13,color:theme.textSecondary,marginBottom:28,lineHeight:1.6}}>
+          Contact Rene or Jesse to be added to the project tracker.
+        </div>
+        <button onClick={onSignOut} style={{width:"100%",padding:"11px",borderRadius:10,border:`0.5px solid ${theme.borderMid}`,background:"transparent",color:theme.textSecondary,fontSize:13,cursor:"pointer"}}>
+          Sign out and try a different account
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Changelog Feed ────────────────────────────────────────────────────────────
 function ChangelogFeed({theme,onTaskClick}){
   const [entries,setEntries]=useState([]);
   const [loading,setLoading]=useState(true);
@@ -188,24 +256,21 @@ function ChangelogFeed({theme,onTaskClick}){
   );
 }
 
-// ── Team member card with expandable task list ────────────────────────────────
-function TeamCard({person, allTasks, theme, currentUser, onTaskClick}){
-  const [expanded, setExpanded] = useState(person.name === currentUser);
-  const mt = allTasks.filter(t => person.ids.includes(t.id));
-  const dd = mt.filter(t => t.status === "done").length;
-  const cr = mt.filter(t => t.p === "crit" && t.status !== "done").length;
-  const bl = mt.filter(t => t.status === "blocked").length;
-  const pp = mt.length ? Math.round(dd/mt.length*100) : 0;
-  const isMe = person.name === currentUser;
-
-  // Group tasks by status: open/in-progress/blocked first, then done
-  const openTasks = mt.filter(t => t.status !== "done");
-  const doneTasks = mt.filter(t => t.status === "done");
-  const sortedTasks = [...openTasks, ...doneTasks];
-
+// ── Team Card ─────────────────────────────────────────────────────────────────
+function TeamCard({person,allTasks,theme,currentUser,onTaskClick}){
+  const [expanded,setExpanded]=useState(person.name===currentUser);
+  const mt=allTasks.filter(t=>person.ids.includes(t.id));
+  const dd=mt.filter(t=>t.status==="done").length;
+  const cr=mt.filter(t=>t.p==="crit"&&t.status!=="done").length;
+  const bl=mt.filter(t=>t.status==="blocked").length;
+  const pp=mt.length?Math.round(dd/mt.length*100):0;
+  const isMe=person.name===currentUser;
+  const openTasks=mt.filter(t=>t.status!=="done");
+  const doneTasks=mt.filter(t=>t.status==="done");
+  const sortedTasks=[...openTasks,...doneTasks];
+  const statusDotColor={open:"#888780","in-progress":"#185FA5",blocked:"#993C1D",done:"#3B6D11"};
   return(
-    <div style={{background:theme.surface,border:`0.5px solid ${isMe?BRAND:theme.border}`,borderRadius:12,overflow:"hidden",boxShadow:isMe?`0 0 0 1px ${BRAND}22`:undefined}}>
-      {/* Card header — always visible, click to expand */}
+    <div style={{background:theme.surface,border:`0.5px solid ${isMe?BRAND:theme.border}`,borderRadius:12,overflow:"hidden"}}>
       <div onClick={()=>setExpanded(e=>!e)} style={{padding:"12px 14px",cursor:"pointer",display:"flex",alignItems:"center",gap:12}}>
         <div style={{width:40,height:40,borderRadius:"50%",background:person.bg,color:person.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:600,flexShrink:0,position:"relative"}}>
           {person.initials}
@@ -228,30 +293,17 @@ function TeamCard({person, allTasks, theme, currentUser, onTaskClick}){
         </div>
         <div style={{fontSize:11,color:theme.textTertiary,flexShrink:0,transition:"transform .2s",transform:expanded?"rotate(90deg)":"none"}}>▶</div>
       </div>
-
-      {/* Expandable task list */}
       {expanded&&(
         <div style={{borderTop:`0.5px solid ${theme.border}`}}>
-          {sortedTasks.length===0&&(
-            <div style={{padding:"12px 14px",fontSize:12,color:theme.textTertiary}}>No tasks assigned.</div>
-          )}
+          {sortedTasks.length===0&&<div style={{padding:"12px 14px",fontSize:12,color:theme.textTertiary}}>No tasks assigned.</div>}
           {sortedTasks.map((task,i)=>{
-            const isDone = task.status === "done";
-            const statusColors = {
-              open:{dot:"#888780"},
-              "in-progress":{dot:"#185FA5"},
-              blocked:{dot:"#993C1D"},
-              done:{dot:"#3B6D11"},
-            };
-            const dotColor = statusColors[task.status]?.dot || "#888780";
+            const isDone=task.status==="done";
             return(
-              <div key={task.id}
-                onClick={()=>onTaskClick(task.id)}
-                style={{display:"flex",alignItems:"center",gap:10,padding:"9px 14px",borderBottom:i<sortedTasks.length-1?`0.5px solid ${theme.border}`:"none",cursor:"pointer",background:"transparent",transition:"background .1s"}}
+              <div key={task.id} onClick={()=>onTaskClick(task.id)}
+                style={{display:"flex",alignItems:"center",gap:10,padding:"9px 14px",borderBottom:i<sortedTasks.length-1?`0.5px solid ${theme.border}`:"none",cursor:"pointer",transition:"background .1s"}}
                 onMouseEnter={e=>e.currentTarget.style.background=theme.surface2}
                 onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                {/* Status dot */}
-                <div style={{width:7,height:7,borderRadius:"50%",background:isDone?dotColor:dotColor,flexShrink:0,opacity:isDone?0.4:1}}/>
+                <div style={{width:7,height:7,borderRadius:"50%",background:statusDotColor[task.status]||"#888780",flexShrink:0,opacity:isDone?0.4:1}}/>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:12,color:isDone?theme.textTertiary:theme.textPrimary,textDecoration:isDone?"line-through":"none",lineHeight:1.35,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{task.t}</div>
                   <div style={{display:"flex",gap:4,marginTop:3,flexWrap:"wrap",alignItems:"center"}}>
@@ -271,6 +323,7 @@ function TeamCard({person, allTasks, theme, currentUser, onTaskClick}){
   );
 }
 
+// ── Task Modal ────────────────────────────────────────────────────────────────
 function TaskModal({task,deptColor,deptName,currentUser,onSave,onDelete,onClose,theme}){
   const th=theme||{border:"#e8e7e3",borderMid:"#d3d1c7",textPrimary:"#2c2c2a",textSecondary:"#5f5e5a",textTertiary:"#888780",inputBg:"#ffffff",surface:"#ffffff",surface2:"#f9f9f8"};
   const [form,setForm]=useState({...task});
@@ -283,7 +336,7 @@ function TaskModal({task,deptColor,deptName,currentUser,onSave,onDelete,onClose,
     setNewComment("");
   };
   return(
-    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:0}}>
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
       <div onClick={e=>e.stopPropagation()} style={{background:th.surface,borderRadius:"16px 16px 0 0",width:"100%",maxWidth:600,maxHeight:"92vh",overflowY:"auto"}}>
         <div style={{width:36,height:4,borderRadius:2,background:th.borderMid,margin:"10px auto 0"}}/>
         <div style={{padding:"12px 16px 10px",borderBottom:`0.5px solid ${th.border}`,display:"flex",alignItems:"flex-start",gap:10}}>
@@ -398,7 +451,11 @@ function AddTaskModal({depts,onSave,onClose,theme}){
   );
 }
 
+// ── Main App ──────────────────────────────────────────────────────────────────
 export default function App(){
+  const [session,setSession]=useState(undefined); // undefined = loading, null = signed out
+  const [allowedUser,setAllowedUser]=useState(null); // {email, display_name}
+  const [authChecking,setAuthChecking]=useState(true);
   const [depts,setDepts]=useState(null);
   const [loading,setLoading]=useState(true);
   const [saving,setSaving]=useState(false);
@@ -410,9 +467,6 @@ export default function App(){
   const [openTask,setOpenTask]=useState(null);
   const [openDepts,setOpenDepts]=useState({});
   const [showAddTask,setShowAddTask]=useState(false);
-  const [currentUser,setCurrentUser]=useState("");
-  const [userSet,setUserSet]=useState(false);
-  const [userInput,setUserInput]=useState("");
   const [darkMode,setDarkMode]=useState(false);
   const isMobile=useIsMobile();
 
@@ -428,12 +482,44 @@ export default function App(){
     inputBg:darkMode?"#2e2e2c":"#ffffff",
   };
 
+  // Load dark mode pref
   useEffect(()=>{
-    const u=localStorage.getItem("durus_user");
-    if(u){setCurrentUser(u);setUserSet(true);}
     const dm=localStorage.getItem("durus_dark");
     if(dm==="1")setDarkMode(true);
   },[]);
+
+  // Auth state listener
+  useEffect(()=>{
+    supabase.auth.getSession().then(({data:{session}})=>{
+      setSession(session);
+      if(session)checkAllowed(session.user.email);
+      else setAuthChecking(false);
+    });
+    const{data:{subscription}}=supabase.auth.onAuthStateChange((_,session)=>{
+      setSession(session);
+      if(session)checkAllowed(session.user.email);
+      else{setAllowedUser(null);setAuthChecking(false);}
+    });
+    return()=>subscription.unsubscribe();
+  },[]);
+
+  async function checkAllowed(email){
+    setAuthChecking(true);
+    try{
+      const{data}=await supabase.from("allowed_users").select("*").eq("email",email).single();
+      setAllowedUser(data||null);
+    }catch(e){setAllowedUser(null);}
+    setAuthChecking(false);
+  }
+
+  const signOut=async()=>{
+    await supabase.auth.signOut();
+    setSession(null);
+    setAllowedUser(null);
+  };
+
+  // Current user display name from allowed_users or fall back to Google name
+  const currentUser = allowedUser?.display_name || session?.user?.user_metadata?.full_name || session?.user?.email?.split("@")[0] || "";
 
   function buildDepts(rows){
     const map={};
@@ -443,6 +529,7 @@ export default function App(){
   }
 
   useEffect(()=>{
+    if(!allowedUser)return;
     (async()=>{
       try{
         const{data,error}=await supabase.from("tasks").select("*");
@@ -452,7 +539,7 @@ export default function App(){
       }catch(e){console.error(e);setDepts(DEFAULT_DEPTS);}
       setLoading(false);
     })();
-  },[]);
+  },[allowedUser]);
 
   useEffect(()=>{
     if(!depts)return;
@@ -464,9 +551,8 @@ export default function App(){
 
   const logChange=useCallback(async(action,taskTitle,deptName,detail="")=>{
     if(!currentUser)return;
-    try{
-      await supabase.from("changelog").insert({id:uid(),user_name:currentUser,action,task_title:taskTitle||null,dept_name:deptName||null,detail:detail||null});
-    }catch(e){console.error(e);}
+    try{await supabase.from("changelog").insert({id:uid(),user_name:currentUser,action,task_title:taskTitle||null,dept_name:deptName||null,detail:detail||null});}
+    catch(e){console.error(e);}
   },[currentUser]);
 
   const persistTask=useCallback(async(task,deptId)=>{
@@ -523,7 +609,27 @@ export default function App(){
 
   const toggleDark=()=>{const next=!darkMode;setDarkMode(next);localStorage.setItem("durus_dark",next?"1":"0");};
 
-  const allTasks=depts?depts.flatMap(d=>d.tasks.map(t=>({...t,deptColor:d.color,deptName:d.name,deptId:d.id}))):[]; 
+  // ── Auth gate ───────────────────────────────────────────────────────────────
+  if(session===undefined||authChecking){
+    return(
+      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:theme.bg}}>
+        <div style={{fontSize:13,color:theme.textTertiary}}>Loading...</div>
+      </div>
+    );
+  }
+  if(!session)return <SignInScreen theme={theme}/>;
+  if(!allowedUser)return <AccessDenied email={session.user.email} theme={theme} onSignOut={signOut}/>;
+
+  // ── App ─────────────────────────────────────────────────────────────────────
+  if(loading||!depts){
+    return(
+      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:theme.bg}}>
+        <div style={{fontSize:13,color:theme.textTertiary}}>Loading dashboard...</div>
+      </div>
+    );
+  }
+
+  const allTasks=depts.flatMap(d=>d.tasks.map(t=>({...t,deptColor:d.color,deptName:d.name,deptId:d.id})));
   const total=allTasks.length;
   const done=allTasks.filter(t=>t.status==="done").length;
   const crit=allTasks.filter(t=>t.p==="crit");
@@ -540,35 +646,6 @@ export default function App(){
     if(search&&!t.t.toLowerCase().includes(search.toLowerCase())&&!t.owner.toLowerCase().includes(search.toLowerCase()))return false;
     return true;
   });
-
-  if(!userSet){
-    return(
-      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:theme.bg,padding:20}}>
-        <div style={{background:theme.surface,borderRadius:16,padding:"32px 24px",maxWidth:360,width:"100%",border:`0.5px solid ${theme.border}`}}>
-          <div style={{textAlign:"center",marginBottom:24}}><img src="/logo.png" alt="Durus Roofing" style={{height:52,objectFit:"contain"}}/></div>
-          <div style={{fontSize:20,fontWeight:500,color:theme.textPrimary,marginBottom:8}}>Welcome to the project tracker</div>
-          <div style={{fontSize:14,color:theme.textSecondary,marginBottom:24,lineHeight:1.6}}>Enter your name so your teammates know who is making updates.</div>
-          <div style={{fontSize:11,color:theme.textTertiary,marginBottom:6,textTransform:"uppercase",letterSpacing:".05em"}}>Your name</div>
-          <input value={userInput} onChange={e=>setUserInput(e.target.value)}
-            onKeyDown={e=>{if(e.key==="Enter"&&userInput.trim()){localStorage.setItem("durus_user",userInput.trim());setCurrentUser(userInput.trim());setUserSet(true);}}}
-            placeholder="e.g. Jesse"
-            style={{width:"100%",fontSize:15,padding:"12px 14px",border:`0.5px solid ${theme.borderMid}`,borderRadius:10,outline:"none",color:theme.textPrimary,background:theme.inputBg,marginBottom:14}}/>
-          <button onClick={()=>{if(userInput.trim()){localStorage.setItem("durus_user",userInput.trim());setCurrentUser(userInput.trim());setUserSet(true);}}}
-            style={{width:"100%",padding:"13px",borderRadius:10,border:"none",background:BRAND,color:"#2c2c2a",fontSize:15,fontWeight:600,cursor:"pointer"}}>
-            Enter dashboard
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if(loading||!depts){
-    return(
-      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:theme.bg}}>
-        <div style={{fontSize:13,color:theme.textTertiary}}>Loading shared dashboard...</div>
-      </div>
-    );
-  }
 
   const openTaskObj=openTask?allTasks.find(t=>t.id===openTask):null;
   const openTaskDept=openTask?depts.find(d=>d.tasks.some(t=>t.id===openTask)):null;
@@ -591,6 +668,7 @@ export default function App(){
   return(
     <div style={{minHeight:"100vh",background:theme.bg,fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",paddingBottom:isMobile?72:0}}>
 
+      {/* Top bar */}
       <div style={{background:theme.surface,borderBottom:`0.5px solid ${theme.border}`,padding:isMobile?"10px 14px":"12px 20px",position:"sticky",top:0,zIndex:100}}>
         <div style={{maxWidth:980,margin:"0 auto"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:isMobile?0:10}}>
@@ -602,8 +680,15 @@ export default function App(){
               <button onClick={toggleDark} style={{width:34,height:19,borderRadius:10,border:"none",background:darkMode?BRAND:"#d3d1c7",cursor:"pointer",position:"relative",flexShrink:0,padding:0}}>
                 <div style={{position:"absolute",top:2,left:darkMode?16:2,width:15,height:15,borderRadius:"50%",background:"#fff",transition:"left .2s"}}/>
               </button>
-              {!isMobile&&<span style={{fontSize:11,color:theme.textTertiary}}>{darkMode?"Dark":"Light"}</span>}
-              <span style={{background:theme.surface2,borderRadius:12,padding:"3px 10px",fontWeight:500,fontSize:12,color:theme.textPrimary}}>{currentUser}</span>
+              {/* User avatar with sign out */}
+              <div style={{display:"flex",alignItems:"center",gap:6,background:theme.surface2,borderRadius:20,padding:"3px 10px 3px 5px"}}>
+                {session?.user?.user_metadata?.avatar_url
+                  ?<img src={session.user.user_metadata.avatar_url} style={{width:22,height:22,borderRadius:"50%",objectFit:"cover"}} alt=""/>
+                  :<div style={{width:22,height:22,borderRadius:"50%",background:BRAND,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#2c2c2a"}}>{currentUser[0]}</div>
+                }
+                <span style={{fontSize:12,fontWeight:500,color:theme.textPrimary}}>{currentUser.split(" ")[0]}</span>
+              </div>
+              <button onClick={signOut} style={{padding:isMobile?"6px 10px":"6px 12px",borderRadius:8,border:`0.5px solid ${theme.borderMid}`,background:"transparent",color:theme.textSecondary,fontSize:11,cursor:"pointer",whiteSpace:"nowrap"}}>Sign out</button>
               <button onClick={()=>setShowAddTask(true)} style={{padding:isMobile?"7px 12px":"7px 16px",borderRadius:8,border:"none",background:BRAND,color:"#2c2c2a",fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>
                 {isMobile?"+ Task":"+ Add task"}
               </button>
@@ -839,22 +924,12 @@ export default function App(){
           )
         )}
 
-        {/* TEAM — expandable cards */}
         {activeView==="team"&&(
           <div>
-            <div style={{fontSize:12,color:theme.textTertiary,marginBottom:12}}>
-              Click any team member to see their tasks. Your card is highlighted and expanded by default.
-            </div>
+            <div style={{fontSize:12,color:theme.textTertiary,marginBottom:12}}>Click any team member to see their tasks. Your card is expanded by default.</div>
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               {TEAM_MEMBERS.map(p=>(
-                <TeamCard
-                  key={p.name}
-                  person={p}
-                  allTasks={allTasks}
-                  theme={theme}
-                  currentUser={currentUser}
-                  onTaskClick={(taskId)=>setOpenTask(taskId)}
-                />
+                <TeamCard key={p.name} person={p} allTasks={allTasks} theme={theme} currentUser={currentUser} onTaskClick={(taskId)=>setOpenTask(taskId)}/>
               ))}
             </div>
           </div>
