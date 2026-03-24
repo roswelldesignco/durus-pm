@@ -102,8 +102,8 @@ const TEAM_MEMBERS = [
 ];
 
 function uid(){return Math.random().toString(36).slice(2,10);}
-function rowToTask(row){return{id:row.id,t:row.title,note:row.note||"",owner:row.owner||"",phase:row.phase||"1",p:row.priority||"high",status:row.status||"open",comments:row.comments||[]};}
-function taskToRow(task,deptId){return{id:task.id,dept_id:deptId,title:task.t,note:task.note||"",owner:task.owner||"",phase:task.phase,priority:task.p,status:task.status,comments:task.comments||[],updated_at:new Date().toISOString()};}
+function rowToTask(row){return{id:row.id,t:row.title,note:row.note||"",owner:row.owner||"",phase:row.phase||"1",p:row.priority||"high",status:row.status||"open",comments:row.comments||[],attachments:row.attachments||[]};}
+function taskToRow(task,deptId){return{id:task.id,dept_id:deptId,title:task.t,note:task.note||"",owner:task.owner||"",phase:task.phase,priority:task.p,status:task.status,comments:task.comments||[],attachments:task.attachments||[],updated_at:new Date().toISOString()};}
 
 function timeAgo(ts){
   const s=Math.floor((Date.now()-new Date(ts))/1000);
@@ -155,8 +155,9 @@ function Avatar({name,size=28,color:colorOverride}){
 }
 
 // ── Owner multi-select dropdown ───────────────────────────────────────────────
-function OwnerSelect({value, onChange, theme}){
+function OwnerSelect({value, onChange, theme, colorMap={}}){
   const th=theme||{border:"#e8e7e3",borderMid:"#d3d1c7",textPrimary:"#2c2c2a",textSecondary:"#5f5e5a",textTertiary:"#888780",inputBg:"#ffffff",surface:"#ffffff",surface2:"#f9f9f8"};
+  const ownerColor=(name)=>colorMap[name]||avatarColor(name);
   const [open,setOpen]=useState(false);
   const [search,setSearch]=useState("");
   const ref=useRef(null);
@@ -187,8 +188,8 @@ function OwnerSelect({value, onChange, theme}){
         style={{minHeight:42,padding:"6px 10px",border:`0.5px solid ${open?BRAND:th.borderMid}`,borderRadius:8,cursor:"pointer",background:th.inputBg,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
         {selectedPeople.length===0&&<span style={{fontSize:13,color:th.textTertiary}}>Select owner(s)...</span>}
         {selectedPeople.map(p=>(
-          <span key={p.name} style={{display:"inline-flex",alignItems:"center",gap:4,background:avatarColor(p.name)+"22",color:avatarColor(p.name),borderRadius:20,padding:"2px 8px 2px 4px",fontSize:12,fontWeight:500}}>
-            <span style={{width:18,height:18,borderRadius:"50%",background:avatarColor(p.name),color:"#fff",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,flexShrink:0}}>{initials(p.name)}</span>
+          <span key={p.name} style={{display:"inline-flex",alignItems:"center",gap:4,background:ownerColor(p.name)+"22",color:ownerColor(p.name),borderRadius:20,padding:"2px 8px 2px 4px",fontSize:12,fontWeight:500}}>
+            <span style={{width:18,height:18,borderRadius:"50%",background:ownerColor(p.name),color:"#fff",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,flexShrink:0}}>{initials(p.name)}</span>
             {p.name.split(" ")[0]}
             <span onClick={e=>{e.stopPropagation();toggle(p);}} style={{marginLeft:2,fontSize:14,lineHeight:1,cursor:"pointer",opacity:.6}}>×</span>
           </span>
@@ -206,7 +207,7 @@ function OwnerSelect({value, onChange, theme}){
           <div style={{maxHeight:220,overflowY:"auto"}}>
             {filtered.map(p=>{
               const isSelected=selectedNames.includes(p.name);
-              const color=avatarColor(p.name);
+              const color=ownerColor(p.name);
               return(
                 <div key={p.name} onClick={()=>toggle(p)}
                   style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",cursor:"pointer",background:isSelected?color+"11":"transparent",borderBottom:`0.5px solid ${th.border}`}}
@@ -397,10 +398,61 @@ function TeamCard({person,allTasks,theme,currentUser,onTaskClick}){
 }
 
 // ── Task modal ────────────────────────────────────────────────────────────────
-function TaskModal({task,deptColor,deptName,currentUser,onSave,onDelete,onClose,theme}){
+function TaskModal({task,deptColor,deptName,currentUser,onSave,onDelete,onClose,theme,colorMap={}}){
   const th=theme||{border:"#e8e7e3",borderMid:"#d3d1c7",textPrimary:"#2c2c2a",textSecondary:"#5f5e5a",textTertiary:"#888780",inputBg:"#ffffff",surface:"#ffffff",surface2:"#f9f9f8"};
-  const [form,setForm]=useState({...task});
+  const [form,setForm]=useState({...task,attachments:task.attachments||[]});
   const [newComment,setNewComment]=useState("");
+  const [addingLink,setAddingLink]=useState(false);
+  const [linkUrl,setLinkUrl]=useState("");
+  const [linkLabel,setLinkLabel]=useState("");
+  const [uploading,setUploading]=useState(false);
+  const [uploadError,setUploadError]=useState("");
+  const fileInputRef=useRef(null);
+
+  const isDriveUrl=(url="")=>url.includes("drive.google.com")||url.includes("docs.google.com")||url.includes("sheets.google.com")||url.includes("slides.google.com");
+
+  const DriveIcon=()=>(
+    <svg width="16" height="16" viewBox="0 0 87.3 78" fill="none" xmlns="http://www.w3.org/2000/svg" style={{flexShrink:0}}>
+      <path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3L28.5 53H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066DA"/>
+      <path d="M43.65 25L29.0 0c-1.35.8-2.5 1.9-3.3 3.3L1.2 48.5A9 9 0 000 53h28.5z" fill="#00AC47"/>
+      <path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75L86.1 57.5A8.97 8.97 0 0087.3 53H58.8l6.15 11.5z" fill="#EA4335"/>
+      <path d="M43.65 25L58.3 0H29.0z" fill="#00832D"/>
+      <path d="M58.8 53H87.3c0-1.55-.4-3.1-1.2-4.5L62.3 6.6c-.8-1.4-1.95-2.5-3.3-3.3L43.65 25 58.8 53z" fill="#2684FC"/>
+      <path d="M28.5 53L13.8 76.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.1-.45 4.5-1.2L58.8 53z" fill="#FFBA00"/>
+    </svg>
+  );
+
+  const LinkIcon=()=>(
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,color:th.textTertiary}}>
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+    </svg>
+  );
+
+  const confirmLink=()=>{
+    if(!linkUrl.trim())return;
+    const att={id:uid(),name:linkLabel.trim()||linkUrl.trim(),url:linkUrl.trim(),type:"link"};
+    setForm(f=>({...f,attachments:[...(f.attachments||[]),att]}));
+    setLinkUrl("");setLinkLabel("");setAddingLink(false);
+  };
+
+  const handleFileUpload=async(e)=>{
+    const file=e.target.files[0];
+    if(!file)return;
+    setUploading(true);setUploadError("");
+    try{
+      const path=`tasks/${form.id}/${uid()}-${file.name}`;
+      const{error}=await supabase.storage.from("task-attachments").upload(path,file);
+      if(error)throw error;
+      const{data:{publicUrl}}=supabase.storage.from("task-attachments").getPublicUrl(path);
+      setForm(f=>({...f,attachments:[...(f.attachments||[]),{id:uid(),name:file.name,url:publicUrl,type:"file"}]}));
+    }catch(e){
+      setUploadError("Upload failed — ensure the 'task-attachments' storage bucket exists in Supabase with public read access.");
+    }
+    setUploading(false);
+    if(fileInputRef.current)fileInputRef.current.value="";
+  };
+
+  const removeAttachment=(id)=>setForm(f=>({...f,attachments:(f.attachments||[]).filter(a=>a.id!==id)}));
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
   const addComment=()=>{
     if(!newComment.trim())return;
@@ -433,12 +485,64 @@ function TaskModal({task,deptColor,deptName,currentUser,onSave,onDelete,onClose,
           </div>
           <div>
             <div style={{fontSize:10,color:th.textTertiary,marginBottom:4,textTransform:"uppercase",letterSpacing:".05em"}}>Owner</div>
-            <OwnerSelect value={form.owner} onChange={v=>set("owner",v)} theme={th}/>
+            <OwnerSelect value={form.owner} onChange={v=>set("owner",v)} theme={th} colorMap={colorMap}/>
           </div>
           <div>
             <div style={{fontSize:10,color:th.textTertiary,marginBottom:4,textTransform:"uppercase",letterSpacing:".05em"}}>Notes</div>
             <textarea value={form.note} onChange={e=>set("note",e.target.value)} rows={3} style={{width:"100%",fontSize:14,padding:"9px 10px",border:`0.5px solid ${th.borderMid}`,borderRadius:8,resize:"vertical",outline:"none",color:th.textPrimary,background:th.inputBg,fontFamily:"inherit"}}/>
           </div>
+          <div>
+            <div style={{fontSize:10,color:th.textTertiary,marginBottom:8,textTransform:"uppercase",letterSpacing:".05em"}}>Attachments</div>
+
+            {/* Existing attachments */}
+            {(form.attachments||[]).map(att=>(
+              <div key={att.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:th.surface2,borderRadius:8,marginBottom:6}}>
+                {isDriveUrl(att.url)?<DriveIcon/>:<LinkIcon/>}
+                <a href={att.url} target="_blank" rel="noopener noreferrer"
+                  style={{flex:1,fontSize:12,color:th.textPrimary,textDecoration:"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}
+                  onClick={e=>e.stopPropagation()}>
+                  {att.name}
+                </a>
+                <button onClick={()=>removeAttachment(att.id)}
+                  style={{background:"none",border:"none",cursor:"pointer",color:th.textTertiary,fontSize:16,lineHeight:1,padding:"0 2px",flexShrink:0}}>×</button>
+              </div>
+            ))}
+
+            {/* Add link inline form */}
+            {addingLink?(
+              <div style={{display:"flex",flexDirection:"column",gap:6,padding:"10px",background:th.surface2,borderRadius:8,marginBottom:6}}>
+                <input autoFocus value={linkUrl} onChange={e=>setLinkUrl(e.target.value)}
+                  onKeyDown={e=>{if(e.key==="Enter")confirmLink();if(e.key==="Escape"){setAddingLink(false);setLinkUrl("");setLinkLabel("");}}}
+                  placeholder="Paste URL (Google Drive, Docs, Sheets, any link…)"
+                  style={{fontSize:13,padding:"7px 9px",border:`0.5px solid ${th.borderMid}`,borderRadius:7,outline:"none",color:th.textPrimary,background:th.inputBg}}/>
+                <div style={{display:"flex",gap:6}}>
+                  <input value={linkLabel} onChange={e=>setLinkLabel(e.target.value)}
+                    onKeyDown={e=>{if(e.key==="Enter")confirmLink();if(e.key==="Escape"){setAddingLink(false);setLinkUrl("");setLinkLabel("");}}}
+                    placeholder="Label (optional)"
+                    style={{flex:1,fontSize:13,padding:"7px 9px",border:`0.5px solid ${th.borderMid}`,borderRadius:7,outline:"none",color:th.textPrimary,background:th.inputBg}}/>
+                  <button onClick={confirmLink}
+                    style={{padding:"7px 14px",borderRadius:7,border:"none",background:BRAND,color:"#2c2c2a",fontSize:12,fontWeight:600,cursor:"pointer"}}>Add</button>
+                  <button onClick={()=>{setAddingLink(false);setLinkUrl("");setLinkLabel("");}}
+                    style={{padding:"7px 10px",borderRadius:7,border:`0.5px solid ${th.borderMid}`,background:"transparent",color:th.textSecondary,fontSize:12,cursor:"pointer"}}>Cancel</button>
+                </div>
+              </div>
+            ):(
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                <button onClick={()=>setAddingLink(true)}
+                  style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:7,border:`0.5px solid ${th.borderMid}`,background:"transparent",color:th.textSecondary,fontSize:12,cursor:"pointer"}}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                  Add link
+                </button>
+                <label style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:7,border:`0.5px solid ${th.borderMid}`,background:"transparent",color:th.textSecondary,fontSize:12,cursor:"pointer"}}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  {uploading?"Uploading…":"Upload file"}
+                  <input ref={fileInputRef} type="file" onChange={handleFileUpload} disabled={uploading} style={{display:"none"}}/>
+                </label>
+              </div>
+            )}
+            {uploadError&&<div style={{fontSize:11,color:"#993C1D",marginTop:6,lineHeight:1.4}}>{uploadError}</div>}
+          </div>
+
           <div>
             <div style={{fontSize:10,color:th.textTertiary,marginBottom:8,textTransform:"uppercase",letterSpacing:".05em"}}>Comments</div>
             {!(form.comments||[]).length&&<div style={{fontSize:13,color:th.textTertiary,marginBottom:8}}>No comments yet.</div>}
@@ -468,7 +572,7 @@ function TaskModal({task,deptColor,deptName,currentUser,onSave,onDelete,onClose,
 }
 
 // ── Add task modal ────────────────────────────────────────────────────────────
-function AddTaskModal({depts,onSave,onClose,theme}){
+function AddTaskModal({depts,onSave,onClose,theme,colorMap={}}){
   const th=theme||{border:"#e8e7e3",borderMid:"#d3d1c7",textPrimary:"#2c2c2a",textSecondary:"#5f5e5a",textTertiary:"#888780",inputBg:"#ffffff",surface:"#ffffff"};
   const [form,setForm]=useState({t:"",note:"",owner:"",phase:"1",p:"high",deptId:depts[0]?.id||"",status:"open",comments:[]});
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
@@ -508,7 +612,7 @@ function AddTaskModal({depts,onSave,onClose,theme}){
           </div>
           <div>
             <div style={{fontSize:10,color:th.textTertiary,marginBottom:4,textTransform:"uppercase",letterSpacing:".05em"}}>Owner</div>
-            <OwnerSelect value={form.owner} onChange={v=>set("owner",v)} theme={th}/>
+            <OwnerSelect value={form.owner} onChange={v=>set("owner",v)} theme={th} colorMap={colorMap}/>
           </div>
           <div>
             <div style={{fontSize:10,color:th.textTertiary,marginBottom:4,textTransform:"uppercase",letterSpacing:".05em"}}>Notes</div>
@@ -1220,13 +1324,13 @@ export default function App(){
       )}
 
       {openTask&&openTaskObj&&(
-        <TaskModal task={openTaskObj} deptColor={openTaskDept?.color||"#888780"} deptName={openTaskDept?.name||""} currentUser={currentUser}
+        <TaskModal task={openTaskObj} deptColor={openTaskDept?.color||"#888780"} deptName={openTaskDept?.name||""} currentUser={currentUser} colorMap={{[currentUser]:effectiveColor}}
           onSave={(updated)=>saveTask(updated,openTaskObj,openTaskDept?.name)}
           onDelete={(id)=>deleteTask(id,openTaskObj?.t,openTaskDept?.name)}
           onClose={()=>setOpenTask(null)} theme={theme}/>
       )}
       {showAddTask&&(
-        <AddTaskModal depts={depts} onSave={addTask} onClose={()=>setShowAddTask(false)} theme={theme}/>
+        <AddTaskModal depts={depts} onSave={addTask} onClose={()=>setShowAddTask(false)} theme={theme} colorMap={{[currentUser]:effectiveColor}}/>
       )}
       {showProfile&&(
         <ProfileModal
