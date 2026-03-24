@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -9,73 +9,84 @@ const supabase = createClient(
 
 const DEFAULT_DEPTS = [
   {id:"legal",name:"Legal & Entity",color:"#534AB7",tasks:[
-    {id:"l1",t:"Form LLC or Corp entity",note:"CA or Delaware — Robert to advise",owner:"Robert",phase:"1",p:"crit",status:"open",comments:[]},
-    {id:"l2",t:"Open business bank account",note:"Required before taking any payments",owner:"Rene / Caleb",phase:"1",p:"crit",status:"open",comments:[]},
-    {id:"l3",t:"Obtain EIN from IRS",note:"Prerequisite for banking & payroll",owner:"Caleb",phase:"1",p:"crit",status:"open",comments:[]},
-    {id:"l4",t:"Draft contractor agreements",note:"Master sub agreement for Joey & future subs",owner:"Robert",phase:"1",p:"crit",status:"open",comments:[]},
-    {id:"l5",t:"Draft customer contract templates",note:"Scope, payment terms, warranty language",owner:"Robert",phase:"1",p:"crit",status:"open",comments:[]},
-    {id:"l6",t:"Confirm C39 license / RMO arrangement",note:"Joey holds license — confirm RMO scope",owner:"Robert / Joey",phase:"1",p:"crit",status:"open",comments:[]},
-    {id:"l7",t:"Obtain umbrella insurance policy",note:"Confirm coverage before first job",owner:"Robert / Jesse",phase:"1",p:"crit",status:"open",comments:[]},
-    {id:"l8",t:"Research workers comp / GL requirements",note:"Required before any field work in CA",owner:"Robert / Jesse",phase:"1",p:"crit",status:"open",comments:[]},
-    {id:"l9",t:"Review terms & liability with vendors",note:"ABC Supply and other material vendors",owner:"Robert",phase:"2",p:"high",status:"open",comments:[]},
+    {id:"l1",t:"Form LLC or Corp entity",note:"CA or Delaware — Robert to advise",owner:"Robert Haugan",phase:"1",p:"crit",status:"open",comments:[]},
+    {id:"l2",t:"Open business bank account",note:"Required before taking any payments",owner:"Rene Suarez, Caleb Troy",phase:"1",p:"crit",status:"open",comments:[]},
+    {id:"l3",t:"Obtain EIN from IRS",note:"Prerequisite for banking & payroll",owner:"Caleb Troy",phase:"1",p:"crit",status:"open",comments:[]},
+    {id:"l4",t:"Draft contractor agreements",note:"Master sub agreement for Joey & future subs",owner:"Robert Haugan",phase:"1",p:"crit",status:"open",comments:[]},
+    {id:"l5",t:"Draft customer contract templates",note:"Scope, payment terms, warranty language",owner:"Robert Haugan",phase:"1",p:"crit",status:"open",comments:[]},
+    {id:"l6",t:"Confirm C39 license / RMO arrangement",note:"Joey holds license — confirm RMO scope",owner:"Robert Haugan, Joey Ham",phase:"1",p:"crit",status:"open",comments:[]},
+    {id:"l7",t:"Obtain umbrella insurance policy",note:"Confirm coverage before first job",owner:"Robert Haugan, Jesse Smith",phase:"1",p:"crit",status:"open",comments:[]},
+    {id:"l8",t:"Research workers comp / GL requirements",note:"Required before any field work in CA",owner:"Robert Haugan, Jesse Smith",phase:"1",p:"crit",status:"open",comments:[]},
+    {id:"l9",t:"Review terms & liability with vendors",note:"ABC Supply and other material vendors",owner:"Robert Haugan",phase:"2",p:"high",status:"open",comments:[]},
   ]},
   {id:"accounting",name:"Accounting & Finance",color:"#0F6E56",tasks:[
-    {id:"a1",t:"Set up QuickBooks Online (QBO)",note:"Chart of accounts tailored to roofing",owner:"Caleb",phase:"1",p:"crit",status:"open",comments:[]},
-    {id:"a2",t:"Connect bank account to QBO",note:"",owner:"Caleb",phase:"1",p:"high",status:"open",comments:[]},
-    {id:"a3",t:"Set up payroll / contractor payment process",note:"1099 vs W2 classification for Joey",owner:"Caleb / Robert",phase:"1",p:"crit",status:"open",comments:[]},
-    {id:"a4",t:"Define invoicing / payment workflow",note:"ServiceTitan to invoice to payment collection",owner:"Caleb / Jesse",phase:"2",p:"high",status:"open",comments:[]},
-    {id:"a5",t:"Establish AP process for vendor payments",note:"ABC Supply, other material vendors",owner:"Caleb / Cat",phase:"2",p:"med",status:"open",comments:[]},
-    {id:"a6",t:"Define financial reporting cadence",note:"Weekly P&L, cash flow review for Rene",owner:"Caleb",phase:"2",p:"med",status:"open",comments:[]},
-    {id:"a7",t:"PE reporting setup",note:"Reporting structure for private equity relationship",owner:"Rene / Caleb",phase:"3",p:"med",status:"open",comments:[]},
+    {id:"a1",t:"Set up QuickBooks Online (QBO)",note:"Chart of accounts tailored to roofing",owner:"Caleb Troy",phase:"1",p:"crit",status:"open",comments:[]},
+    {id:"a2",t:"Connect bank account to QBO",note:"",owner:"Caleb Troy",phase:"1",p:"high",status:"open",comments:[]},
+    {id:"a3",t:"Set up payroll / contractor payment process",note:"1099 vs W2 classification for Joey",owner:"Caleb Troy, Robert Haugan",phase:"1",p:"crit",status:"open",comments:[]},
+    {id:"a4",t:"Define invoicing / payment workflow",note:"ServiceTitan to invoice to payment collection",owner:"Caleb Troy, Jesse Smith",phase:"2",p:"high",status:"open",comments:[]},
+    {id:"a5",t:"Establish AP process for vendor payments",note:"ABC Supply, other material vendors",owner:"Caleb Troy, Cat Sullins",phase:"2",p:"med",status:"open",comments:[]},
+    {id:"a6",t:"Define financial reporting cadence",note:"Weekly P&L, cash flow review for Rene",owner:"Caleb Troy",phase:"2",p:"med",status:"open",comments:[]},
+    {id:"a7",t:"PE reporting setup",note:"Reporting structure for private equity relationship",owner:"Rene Suarez, Caleb Troy",phase:"3",p:"med",status:"open",comments:[]},
   ]},
   {id:"ops",name:"Operations",color:"#185FA5",tasks:[
-    {id:"o1",t:"Onboard Joey Ham formally",note:"Signed agreement, COI on file",owner:"Jesse / Robert",phase:"1",p:"crit",status:"open",comments:[]},
-    {id:"o2",t:"Define dispatch & scheduling workflow",note:"How jobs are assigned and confirmed with Joey",owner:"Jesse / Cat",phase:"1",p:"high",status:"open",comments:[]},
-    {id:"o3",t:"Build job intake checklist",note:"Info required before dispatching",owner:"Jesse / Cat",phase:"2",p:"high",status:"open",comments:[]},
-    {id:"o4",t:"Define QC/QA inspection process",note:"Who does post-install checks and what is checked",owner:"Jesse / Joey",phase:"2",p:"high",status:"open",comments:[]},
-    {id:"o5",t:"Establish warranty claims process",note:"How customers request warranty work",owner:"Jesse / Cat",phase:"2",p:"med",status:"open",comments:[]},
-    {id:"o6",t:"Build complaints handling SOP",note:"Escalation path and resolution timeline",owner:"Cat / Jesse",phase:"2",p:"med",status:"open",comments:[]},
-    {id:"o7",t:"Source 2nd contractor backup",note:"Single-contractor dependency is top ops risk",owner:"Jesse",phase:"3",p:"high",status:"open",comments:[]},
+    {id:"o1",t:"Onboard Joey Ham formally",note:"Signed agreement, COI on file",owner:"Jesse Smith, Robert Haugan",phase:"1",p:"crit",status:"open",comments:[]},
+    {id:"o2",t:"Define dispatch & scheduling workflow",note:"How jobs are assigned and confirmed with Joey",owner:"Jesse Smith, Cat Sullins",phase:"1",p:"high",status:"open",comments:[]},
+    {id:"o3",t:"Build job intake checklist",note:"Info required before dispatching",owner:"Jesse Smith, Cat Sullins",phase:"2",p:"high",status:"open",comments:[]},
+    {id:"o4",t:"Define QC/QA inspection process",note:"Who does post-install checks and what is checked",owner:"Jesse Smith, Joey Ham",phase:"2",p:"high",status:"open",comments:[]},
+    {id:"o5",t:"Establish warranty claims process",note:"How customers request warranty work",owner:"Jesse Smith, Cat Sullins",phase:"2",p:"med",status:"open",comments:[]},
+    {id:"o6",t:"Build complaints handling SOP",note:"Escalation path and resolution timeline",owner:"Cat Sullins, Jesse Smith",phase:"2",p:"med",status:"open",comments:[]},
+    {id:"o7",t:"Source 2nd contractor backup",note:"Single-contractor dependency is top ops risk",owner:"Jesse Smith",phase:"3",p:"high",status:"open",comments:[]},
   ]},
   {id:"salesops",name:"Sales Operations (CRM)",color:"#993C1D",tasks:[
-    {id:"s1",t:"Set up ServiceTitan account",note:"Tenant, admin users, company profile",owner:"Jesse",phase:"1",p:"crit",status:"open",comments:[]},
-    {id:"s2",t:"Build quote / estimate templates in ST",note:"Roofing-specific line items and pricing",owner:"Jesse / Rene",phase:"1",p:"high",status:"open",comments:[]},
-    {id:"s3",t:"Configure customer pipeline stages",note:"Lead to Quote to Approved to Scheduled to Complete",owner:"Jesse",phase:"2",p:"high",status:"open",comments:[]},
-    {id:"s4",t:"Connect ST invoicing to QBO",note:"Critical for clean AR flow",owner:"Jesse / Caleb",phase:"2",p:"high",status:"open",comments:[]},
-    {id:"s5",t:"Train Rene + Cat on ServiceTitan",note:"Basic job creation, quoting, dispatch",owner:"Jesse",phase:"2",p:"high",status:"open",comments:[]},
-    {id:"s6",t:"Identify first 3 insurance adjuster contacts",note:"Build referral engine foundation",owner:"Rene",phase:"3",p:"med",status:"open",comments:[]},
-    {id:"s7",t:"Build insurance claims workflow in ST",note:"Track claim number, adjuster, payout",owner:"Jesse",phase:"3",p:"med",status:"open",comments:[]},
+    {id:"s1",t:"Set up ServiceTitan account",note:"Tenant, admin users, company profile",owner:"Jesse Smith",phase:"1",p:"crit",status:"open",comments:[]},
+    {id:"s2",t:"Build quote / estimate templates in ST",note:"Roofing-specific line items and pricing",owner:"Jesse Smith, Rene Suarez",phase:"1",p:"high",status:"open",comments:[]},
+    {id:"s3",t:"Configure customer pipeline stages",note:"Lead to Quote to Approved to Scheduled to Complete",owner:"Jesse Smith",phase:"2",p:"high",status:"open",comments:[]},
+    {id:"s4",t:"Connect ST invoicing to QBO",note:"Critical for clean AR flow",owner:"Jesse Smith, Caleb Troy",phase:"2",p:"high",status:"open",comments:[]},
+    {id:"s5",t:"Train Rene + Cat on ServiceTitan",note:"Basic job creation, quoting, dispatch",owner:"Jesse Smith",phase:"2",p:"high",status:"open",comments:[]},
+    {id:"s6",t:"Identify first 3 insurance adjuster contacts",note:"Build referral engine foundation",owner:"Rene Suarez",phase:"3",p:"med",status:"open",comments:[]},
+    {id:"s7",t:"Build insurance claims workflow in ST",note:"Track claim number, adjuster, payout",owner:"Jesse Smith",phase:"3",p:"med",status:"open",comments:[]},
   ]},
   {id:"sales",name:"Sales",color:"#639922",tasks:[
-    {id:"sa1",t:"Define service offerings & pricing",note:"TPO, tile, shingle, repair — OC market rates",owner:"Rene / Joey",phase:"1",p:"crit",status:"open",comments:[]},
-    {id:"sa2",t:"Build proposal / quote template",note:"Branded PDF with scope, pricing, warranty",owner:"Lupita / Jesse",phase:"1",p:"high",status:"open",comments:[]},
-    {id:"sa3",t:"Identify first 10 target leads",note:"Network, referrals, neighbors of Joey jobs",owner:"Rene",phase:"1",p:"high",status:"open",comments:[]},
-    {id:"sa4",t:"Define commission / comp plan",note:"Track how sales are attributed and paid",owner:"Rene / Caleb",phase:"2",p:"med",status:"open",comments:[]},
-    {id:"sa5",t:"Develop add-on upsell menu",note:"Gutters, coatings, skylight, solar-ready prep",owner:"Rene / Joey",phase:"3",p:"med",status:"open",comments:[]},
+    {id:"sa1",t:"Define service offerings & pricing",note:"TPO, tile, shingle, repair — OC market rates",owner:"Rene Suarez, Joey Ham",phase:"1",p:"crit",status:"open",comments:[]},
+    {id:"sa2",t:"Build proposal / quote template",note:"Branded PDF with scope, pricing, warranty",owner:"Lupita Perez, Jesse Smith",phase:"1",p:"high",status:"open",comments:[]},
+    {id:"sa3",t:"Identify first 10 target leads",note:"Network, referrals, neighbors of Joey jobs",owner:"Rene Suarez",phase:"1",p:"high",status:"open",comments:[]},
+    {id:"sa4",t:"Define commission / comp plan",note:"Track how sales are attributed and paid",owner:"Rene Suarez, Caleb Troy",phase:"2",p:"med",status:"open",comments:[]},
+    {id:"sa5",t:"Develop add-on upsell menu",note:"Gutters, coatings, skylight, solar-ready prep",owner:"Rene Suarez, Joey Ham",phase:"3",p:"med",status:"open",comments:[]},
   ]},
   {id:"mktg",name:"Marketing & Brand",color:"#993556",tasks:[
-    {id:"m1",t:"Register domain & set up business email",note:"@durusroofing.com — Google Workspace preferred",owner:"Jesse",phase:"1",p:"crit",status:"open",comments:[]},
-    {id:"m2",t:"Build Google Business Profile",note:"Photos, categories, service area, hours",owner:"Lupita",phase:"1",p:"crit",status:"open",comments:[]},
-    {id:"m3",t:"Develop brand kit",note:"Logo, colors, fonts, templates",owner:"Lupita",phase:"1",p:"high",status:"open",comments:[]},
-    {id:"m4",t:"Launch basic website (5 pages)",note:"Home, Services, About, Reviews, Contact",owner:"Lupita / Jesse",phase:"1",p:"high",status:"open",comments:[]},
-    {id:"m5",t:"Set up social accounts (IG, Facebook)",note:"Brand-consistent handles",owner:"Lupita",phase:"1",p:"high",status:"open",comments:[]},
-    {id:"m6",t:"Create review solicitation process",note:"Post-job text/email asking for Google review",owner:"Cat / Lupita",phase:"2",p:"high",status:"open",comments:[]},
-    {id:"m7",t:"Plan first paid campaign (Google LSA)",note:"Fastest lead ROI channel in OC roofing",owner:"Lupita / Cleo",phase:"2",p:"med",status:"open",comments:[]},
-    {id:"m8",t:"Build content calendar",note:"Before/after photos, job spotlights 3x/week",owner:"Lupita",phase:"2",p:"med",status:"open",comments:[]},
-    {id:"m9",t:"Develop referral/discount program",note:"Incentive for referrals and reviews",owner:"Cleo / Rene",phase:"3",p:"med",status:"open",comments:[]},
+    {id:"m1",t:"Register domain & set up business email",note:"@durusroofing.com — Google Workspace preferred",owner:"Jesse Smith",phase:"1",p:"crit",status:"open",comments:[]},
+    {id:"m2",t:"Build Google Business Profile",note:"Photos, categories, service area, hours",owner:"Lupita Perez",phase:"1",p:"crit",status:"open",comments:[]},
+    {id:"m3",t:"Develop brand kit",note:"Logo, colors, fonts, templates",owner:"Lupita Perez",phase:"1",p:"high",status:"open",comments:[]},
+    {id:"m4",t:"Launch basic website (5 pages)",note:"Home, Services, About, Reviews, Contact",owner:"Lupita Perez, Jesse Smith",phase:"1",p:"high",status:"open",comments:[]},
+    {id:"m5",t:"Set up social accounts (IG, Facebook)",note:"Brand-consistent handles",owner:"Lupita Perez",phase:"1",p:"high",status:"open",comments:[]},
+    {id:"m6",t:"Create review solicitation process",note:"Post-job text/email asking for Google review",owner:"Cat Sullins, Lupita Perez",phase:"2",p:"high",status:"open",comments:[]},
+    {id:"m7",t:"Plan first paid campaign (Google LSA)",note:"Fastest lead ROI channel in OC roofing",owner:"Lupita Perez, Cleo Parra",phase:"2",p:"med",status:"open",comments:[]},
+    {id:"m8",t:"Build content calendar",note:"Before/after photos, job spotlights 3x/week",owner:"Lupita Perez",phase:"2",p:"med",status:"open",comments:[]},
+    {id:"m9",t:"Develop referral/discount program",note:"Incentive for referrals and reviews",owner:"Cleo Parra, Rene Suarez",phase:"3",p:"med",status:"open",comments:[]},
   ]},
   {id:"admin",name:"Administrative",color:"#5F5E5A",tasks:[
-    {id:"ad1",t:"Confirm C39 license active & in good standing",note:"CSLB license lookup",owner:"Robert / Joey",phase:"1",p:"crit",status:"open",comments:[]},
-    {id:"ad2",t:"Set up registered agent in CA",note:"Required if entity formed outside CA",owner:"Robert",phase:"1",p:"high",status:"open",comments:[]},
-    {id:"ad3",t:"Secure office / virtual address in OC",note:"Required for CSLB license address",owner:"Jesse / Rene",phase:"1",p:"high",status:"open",comments:[]},
-    {id:"ad4",t:"Set up team communication tool",note:"Slack or similar — all team channels",owner:"Jesse",phase:"1",p:"med",status:"open",comments:[]},
-    {id:"ad5",t:"Build customer service response templates",note:"Phone, email, and text scripts",owner:"Cat",phase:"2",p:"med",status:"open",comments:[]},
+    {id:"ad1",t:"Confirm C39 license active & in good standing",note:"CSLB license lookup",owner:"Robert Haugan, Joey Ham",phase:"1",p:"crit",status:"open",comments:[]},
+    {id:"ad2",t:"Set up registered agent in CA",note:"Required if entity formed outside CA",owner:"Robert Haugan",phase:"1",p:"high",status:"open",comments:[]},
+    {id:"ad3",t:"Secure office / virtual address in OC",note:"Required for CSLB license address",owner:"Jesse Smith, Rene Suarez",phase:"1",p:"high",status:"open",comments:[]},
+    {id:"ad4",t:"Set up team communication tool",note:"Slack or similar — all team channels",owner:"Jesse Smith",phase:"1",p:"med",status:"open",comments:[]},
+    {id:"ad5",t:"Build customer service response templates",note:"Phone, email, and text scripts",owner:"Cat Sullins",phase:"2",p:"med",status:"open",comments:[]},
   ]},
 ];
 
 const PHASE_LABELS = {"1":"Wk 1-2","2":"Wk 3-4","3":"Mo 2"};
 const PRI_LABELS = {crit:"Critical",high:"High",med:"Medium"};
 const BRAND = "#BCF000";
+
+const TEAM_PEOPLE = [
+  {name:"Rene Suarez",   email:"r.suarez@hyten.co"},
+  {name:"Jesse Smith",   email:"j.smith@hyten.co"},
+  {name:"Robert Haugan", email:"r.haugan@hyten.co"},
+  {name:"Caleb Troy",    email:"caleb@chronolytix.com"},
+  {name:"Cat Sullins",   email:"cat@hyten.co"},
+  {name:"Lupita Perez",  email:"lupita@hyten.co"},
+  {name:"Cleo Parra",    email:"cleo@hyten.co"},
+  {name:"Joey Ham",      email:"joey95ham@gmail.com"},
+];
 
 const TEAM_MEMBERS = [
   {name:"Rene Suarez",initials:"RS",title:"CEO / Owner",color:"#534AB7",bg:"#EEEDFE",ids:["l2","sa1","sa3","sa4","sa5","s6","a7","m9"]},
@@ -100,6 +111,12 @@ function timeAgo(ts){
   if(s<604800)return`${Math.floor(s/86400)}d ago`;
   return new Date(ts).toLocaleDateString("en-US",{month:"short",day:"numeric"});
 }
+
+function avatarColor(name){
+  const colors=["#534AB7","#185FA5","#0F6E56","#993C1D","#639922","#993556","#854F0B","#5F5E5A"];
+  return colors[(name||"A").charCodeAt(0)%colors.length];
+}
+function initials(name){return(name||"?").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();}
 
 function useIsMobile(){
   const [mobile,setMobile]=useState(false);
@@ -127,43 +144,112 @@ function StatusBadge({status}){
 }
 
 function Avatar({name,size=28}){
-  const initials=name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
-  const colors=["#534AB7","#185FA5","#0F6E56","#993C1D","#639922","#993556","#854F0B","#5F5E5A"];
-  const color=colors[name.charCodeAt(0)%colors.length];
+  const color=avatarColor(name||"?");
   return(
     <div style={{width:size,height:size,borderRadius:"50%",background:color+"22",color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:size*0.38,fontWeight:600,flexShrink:0}}>
-      {initials}
+      {initials(name||"?")}
     </div>
   );
 }
 
-// ── Google Sign-In Screen ─────────────────────────────────────────────────────
-function SignInScreen({theme}){
-  const [loading,setLoading]=useState(false);
-  const [error,setError]=useState("");
+// ── Owner multi-select dropdown ───────────────────────────────────────────────
+function OwnerSelect({value, onChange, theme}){
+  const th=theme||{border:"#e8e7e3",borderMid:"#d3d1c7",textPrimary:"#2c2c2a",textSecondary:"#5f5e5a",textTertiary:"#888780",inputBg:"#ffffff",surface:"#ffffff",surface2:"#f9f9f8"};
+  const [open,setOpen]=useState(false);
+  const [search,setSearch]=useState("");
+  const ref=useRef(null);
 
-  const signIn=async()=>{
-    setLoading(true);
-    setError("");
-    const{error}=await supabase.auth.signInWithOAuth({
-      provider:"google",
-      options:{redirectTo:window.location.origin},
-    });
-    if(error){setError(error.message);setLoading(false);}
+  // Close on outside click
+  useEffect(()=>{
+    const handler=(e)=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);};
+    document.addEventListener("mousedown",handler);
+    return()=>document.removeEventListener("mousedown",handler);
+  },[]);
+
+  const selectedNames=(value||"").split(",").map(s=>s.trim()).filter(Boolean);
+  const selectedPeople=TEAM_PEOPLE.filter(p=>selectedNames.includes(p.name));
+  const filtered=TEAM_PEOPLE.filter(p=>
+    p.name.toLowerCase().includes(search.toLowerCase())||
+    p.email.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const toggle=(person)=>{
+    const already=selectedNames.includes(person.name);
+    const next=already?selectedNames.filter(n=>n!==person.name):[...selectedNames,person.name];
+    onChange(next.join(", "));
   };
 
   return(
+    <div ref={ref} style={{position:"relative"}}>
+      <div onClick={()=>setOpen(o=>!o)}
+        style={{minHeight:42,padding:"6px 10px",border:`0.5px solid ${open?BRAND:th.borderMid}`,borderRadius:8,cursor:"pointer",background:th.inputBg,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+        {selectedPeople.length===0&&<span style={{fontSize:13,color:th.textTertiary}}>Select owner(s)...</span>}
+        {selectedPeople.map(p=>(
+          <span key={p.name} style={{display:"inline-flex",alignItems:"center",gap:4,background:avatarColor(p.name)+"22",color:avatarColor(p.name),borderRadius:20,padding:"2px 8px 2px 4px",fontSize:12,fontWeight:500}}>
+            <span style={{width:18,height:18,borderRadius:"50%",background:avatarColor(p.name),color:"#fff",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,flexShrink:0}}>{initials(p.name)}</span>
+            {p.name.split(" ")[0]}
+            <span onClick={e=>{e.stopPropagation();toggle(p);}} style={{marginLeft:2,fontSize:14,lineHeight:1,cursor:"pointer",opacity:.6}}>×</span>
+          </span>
+        ))}
+        <span style={{marginLeft:"auto",fontSize:10,color:th.textTertiary,flexShrink:0}}>{open?"▲":"▼"}</span>
+      </div>
+
+      {open&&(
+        <div style={{position:"absolute",top:"calc(100% + 4px)",left:0,right:0,background:th.surface,border:`0.5px solid ${th.borderMid}`,borderRadius:10,zIndex:500,boxShadow:"0 4px 20px rgba(0,0,0,0.12)",overflow:"hidden"}}>
+          <div style={{padding:"8px 10px",borderBottom:`0.5px solid ${th.border}`}}>
+            <input autoFocus value={search} onChange={e=>setSearch(e.target.value)}
+              placeholder="Search by name or email..."
+              style={{width:"100%",fontSize:13,padding:"5px 8px",border:`0.5px solid ${th.borderMid}`,borderRadius:6,outline:"none",color:th.textPrimary,background:th.inputBg}}/>
+          </div>
+          <div style={{maxHeight:220,overflowY:"auto"}}>
+            {filtered.map(p=>{
+              const isSelected=selectedNames.includes(p.name);
+              const color=avatarColor(p.name);
+              return(
+                <div key={p.name} onClick={()=>toggle(p)}
+                  style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",cursor:"pointer",background:isSelected?color+"11":"transparent",borderBottom:`0.5px solid ${th.border}`}}
+                  onMouseEnter={e=>{if(!isSelected)e.currentTarget.style.background=th.surface2;}}
+                  onMouseLeave={e=>{if(!isSelected)e.currentTarget.style.background="transparent";}}>
+                  <div style={{width:30,height:30,borderRadius:"50%",background:color+"22",color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{initials(p.name)}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,fontWeight:500,color:th.textPrimary}}>{p.name}</div>
+                    <div style={{fontSize:11,color:th.textTertiary}}>{p.email}</div>
+                  </div>
+                  {isSelected&&(
+                    <div style={{width:18,height:18,borderRadius:"50%",background:BRAND,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                      <div style={{width:9,height:6,borderLeft:"1.5px solid #2c2c2a",borderBottom:"1.5px solid #2c2c2a",transform:"rotate(-45deg) translate(0,1px)"}}/>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <div style={{padding:"8px 12px",borderTop:`0.5px solid ${th.border}`}}>
+            <button onClick={()=>setOpen(false)} style={{width:"100%",padding:"7px",borderRadius:7,border:"none",background:BRAND,color:"#2c2c2a",fontSize:12,fontWeight:600,cursor:"pointer"}}>Done</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Sign-in ───────────────────────────────────────────────────────────────────
+function SignInScreen({theme}){
+  const [loading,setLoading]=useState(false);
+  const [error,setError]=useState("");
+  const signIn=async()=>{
+    setLoading(true);setError("");
+    const{error}=await supabase.auth.signInWithOAuth({provider:"google",options:{redirectTo:window.location.origin}});
+    if(error){setError(error.message);setLoading(false);}
+  };
+  return(
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:theme.bg,padding:20}}>
       <div style={{background:theme.surface,borderRadius:16,padding:"40px 32px",maxWidth:380,width:"100%",border:`0.5px solid ${theme.border}`,textAlign:"center"}}>
-        <div style={{marginBottom:28}}>
-          <img src="/logo.png" alt="Durus Roofing" style={{height:56,objectFit:"contain"}}/>
-        </div>
+        <div style={{marginBottom:28}}><img src="/logo.png" alt="Durus Roofing" style={{height:56,objectFit:"contain"}}/></div>
         <div style={{fontSize:22,fontWeight:500,color:theme.textPrimary,marginBottom:8}}>Project tracker</div>
         <div style={{fontSize:14,color:theme.textSecondary,marginBottom:32,lineHeight:1.6}}>Sign in with your Google account to access the team dashboard.</div>
-
         <button onClick={signIn} disabled={loading}
-          style={{width:"100%",padding:"13px 20px",borderRadius:10,border:`0.5px solid ${theme.borderMid}`,background:loading?"#d3d1c7":theme.surface,color:theme.textPrimary,fontSize:15,fontWeight:500,cursor:loading?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:12,transition:"background .15s"}}>
-          {/* Google G icon */}
+          style={{width:"100%",padding:"13px 20px",borderRadius:10,border:`0.5px solid ${theme.borderMid}`,background:loading?"#d3d1c7":theme.surface,color:theme.textPrimary,fontSize:15,fontWeight:500,cursor:loading?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:12}}>
           <svg width="20" height="20" viewBox="0 0 24 24">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -172,47 +258,34 @@ function SignInScreen({theme}){
           </svg>
           {loading?"Signing in...":"Sign in with Google"}
         </button>
-
         {error&&<div style={{marginTop:14,fontSize:12,color:"#993C1D",background:"#FAECE7",borderRadius:8,padding:"8px 12px"}}>{error}</div>}
-
-        <div style={{marginTop:24,fontSize:11,color:theme.textTertiary,lineHeight:1.6}}>
-          Access is restricted to approved team members only. Contact Rene or Jesse to be added.
-        </div>
+        <div style={{marginTop:24,fontSize:11,color:theme.textTertiary,lineHeight:1.6}}>Access is restricted to approved team members only. Contact Rene or Jesse to be added.</div>
       </div>
     </div>
   );
 }
 
-// ── Access Denied Screen ──────────────────────────────────────────────────────
 function AccessDenied({email,theme,onSignOut}){
   return(
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:theme.bg,padding:20}}>
-      <div style={{background:theme.surface,borderRadius:16,padding:"40px 32px",maxWidth:380,width:"100%",border:`0.5px solid #F0997B`,textAlign:"center"}}>
+      <div style={{background:theme.surface,borderRadius:16,padding:"40px 32px",maxWidth:380,width:"100%",border:"0.5px solid #F0997B",textAlign:"center"}}>
         <div style={{marginBottom:20}}><img src="/logo.png" alt="Durus Roofing" style={{height:48,objectFit:"contain"}}/></div>
         <div style={{fontSize:18,fontWeight:500,color:"#993C1D",marginBottom:8}}>Access not approved</div>
-        <div style={{fontSize:13,color:theme.textSecondary,marginBottom:6,lineHeight:1.6}}>
-          <strong style={{color:theme.textPrimary}}>{email}</strong> is not on the approved team list.
-        </div>
-        <div style={{fontSize:13,color:theme.textSecondary,marginBottom:28,lineHeight:1.6}}>
-          Contact Rene or Jesse to be added to the project tracker.
-        </div>
-        <button onClick={onSignOut} style={{width:"100%",padding:"11px",borderRadius:10,border:`0.5px solid ${theme.borderMid}`,background:"transparent",color:theme.textSecondary,fontSize:13,cursor:"pointer"}}>
-          Sign out and try a different account
-        </button>
+        <div style={{fontSize:13,color:theme.textSecondary,marginBottom:6,lineHeight:1.6}}><strong style={{color:theme.textPrimary}}>{email}</strong> is not on the approved team list.</div>
+        <div style={{fontSize:13,color:theme.textSecondary,marginBottom:28,lineHeight:1.6}}>Contact Rene or Jesse to be added to the project tracker.</div>
+        <button onClick={onSignOut} style={{width:"100%",padding:"11px",borderRadius:10,border:`0.5px solid ${theme.borderMid}`,background:"transparent",color:theme.textSecondary,fontSize:13,cursor:"pointer"}}>Sign out and try a different account</button>
       </div>
     </div>
   );
 }
 
-// ── Changelog Feed ────────────────────────────────────────────────────────────
+// ── Changelog ─────────────────────────────────────────────────────────────────
 function ChangelogFeed({theme,onTaskClick}){
   const [entries,setEntries]=useState([]);
   const [loading,setLoading]=useState(true);
   async function load(){
-    try{
-      const{data}=await supabase.from("changelog").select("*").order("created_at",{ascending:false}).limit(30);
-      if(data)setEntries(data);
-    }catch(e){console.error(e);}
+    try{const{data}=await supabase.from("changelog").select("*").order("created_at",{ascending:false}).limit(30);if(data)setEntries(data);}
+    catch(e){console.error(e);}
     setLoading(false);
   }
   useEffect(()=>{load();const i=setInterval(load,15000);return()=>clearInterval(i);},[]);
@@ -256,7 +329,7 @@ function ChangelogFeed({theme,onTaskClick}){
   );
 }
 
-// ── Team Card ─────────────────────────────────────────────────────────────────
+// ── Team card ─────────────────────────────────────────────────────────────────
 function TeamCard({person,allTasks,theme,currentUser,onTaskClick}){
   const [expanded,setExpanded]=useState(person.name===currentUser);
   const mt=allTasks.filter(t=>person.ids.includes(t.id));
@@ -265,9 +338,7 @@ function TeamCard({person,allTasks,theme,currentUser,onTaskClick}){
   const bl=mt.filter(t=>t.status==="blocked").length;
   const pp=mt.length?Math.round(dd/mt.length*100):0;
   const isMe=person.name===currentUser;
-  const openTasks=mt.filter(t=>t.status!=="done");
-  const doneTasks=mt.filter(t=>t.status==="done");
-  const sortedTasks=[...openTasks,...doneTasks];
+  const sorted=[...mt.filter(t=>t.status!=="done"),...mt.filter(t=>t.status==="done")];
   const statusDotColor={open:"#888780","in-progress":"#185FA5",blocked:"#993C1D",done:"#3B6D11"};
   return(
     <div style={{background:theme.surface,border:`0.5px solid ${isMe?BRAND:theme.border}`,borderRadius:12,overflow:"hidden"}}>
@@ -295,12 +366,12 @@ function TeamCard({person,allTasks,theme,currentUser,onTaskClick}){
       </div>
       {expanded&&(
         <div style={{borderTop:`0.5px solid ${theme.border}`}}>
-          {sortedTasks.length===0&&<div style={{padding:"12px 14px",fontSize:12,color:theme.textTertiary}}>No tasks assigned.</div>}
-          {sortedTasks.map((task,i)=>{
+          {sorted.length===0&&<div style={{padding:"12px 14px",fontSize:12,color:theme.textTertiary}}>No tasks assigned.</div>}
+          {sorted.map((task,i)=>{
             const isDone=task.status==="done";
             return(
               <div key={task.id} onClick={()=>onTaskClick(task.id)}
-                style={{display:"flex",alignItems:"center",gap:10,padding:"9px 14px",borderBottom:i<sortedTasks.length-1?`0.5px solid ${theme.border}`:"none",cursor:"pointer",transition:"background .1s"}}
+                style={{display:"flex",alignItems:"center",gap:10,padding:"9px 14px",borderBottom:i<sorted.length-1?`0.5px solid ${theme.border}`:"none",cursor:"pointer"}}
                 onMouseEnter={e=>e.currentTarget.style.background=theme.surface2}
                 onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                 <div style={{width:7,height:7,borderRadius:"50%",background:statusDotColor[task.status]||"#888780",flexShrink:0,opacity:isDone?0.4:1}}/>
@@ -323,7 +394,7 @@ function TeamCard({person,allTasks,theme,currentUser,onTaskClick}){
   );
 }
 
-// ── Task Modal ────────────────────────────────────────────────────────────────
+// ── Task modal ────────────────────────────────────────────────────────────────
 function TaskModal({task,deptColor,deptName,currentUser,onSave,onDelete,onClose,theme}){
   const th=theme||{border:"#e8e7e3",borderMid:"#d3d1c7",textPrimary:"#2c2c2a",textSecondary:"#5f5e5a",textTertiary:"#888780",inputBg:"#ffffff",surface:"#ffffff",surface2:"#f9f9f8"};
   const [form,setForm]=useState({...task});
@@ -360,7 +431,7 @@ function TaskModal({task,deptColor,deptName,currentUser,onSave,onDelete,onClose,
           </div>
           <div>
             <div style={{fontSize:10,color:th.textTertiary,marginBottom:4,textTransform:"uppercase",letterSpacing:".05em"}}>Owner</div>
-            <input value={form.owner} onChange={e=>set("owner",e.target.value)} style={{width:"100%",fontSize:14,padding:"9px 10px",border:`0.5px solid ${th.borderMid}`,borderRadius:8,outline:"none",color:th.textPrimary,background:th.inputBg}}/>
+            <OwnerSelect value={form.owner} onChange={v=>set("owner",v)} theme={th}/>
           </div>
           <div>
             <div style={{fontSize:10,color:th.textTertiary,marginBottom:4,textTransform:"uppercase",letterSpacing:".05em"}}>Notes</div>
@@ -394,6 +465,7 @@ function TaskModal({task,deptColor,deptName,currentUser,onSave,onDelete,onClose,
   );
 }
 
+// ── Add task modal ────────────────────────────────────────────────────────────
 function AddTaskModal({depts,onSave,onClose,theme}){
   const th=theme||{border:"#e8e7e3",borderMid:"#d3d1c7",textPrimary:"#2c2c2a",textSecondary:"#5f5e5a",textTertiary:"#888780",inputBg:"#ffffff",surface:"#ffffff"};
   const [form,setForm]=useState({t:"",note:"",owner:"",phase:"1",p:"high",deptId:depts[0]?.id||"",status:"open",comments:[]});
@@ -420,10 +492,6 @@ function AddTaskModal({depts,onSave,onClose,theme}){
               </select>
             </div>
             <div>
-              <div style={{fontSize:10,color:th.textTertiary,marginBottom:4,textTransform:"uppercase",letterSpacing:".05em"}}>Owner</div>
-              <input value={form.owner} onChange={e=>set("owner",e.target.value)} placeholder="Name(s)" style={{width:"100%",fontSize:13,padding:"8px 10px",border:`0.5px solid ${th.borderMid}`,borderRadius:8,outline:"none",color:th.textPrimary,background:th.inputBg}}/>
-            </div>
-            <div>
               <div style={{fontSize:10,color:th.textTertiary,marginBottom:4,textTransform:"uppercase",letterSpacing:".05em"}}>Phase</div>
               <select value={form.phase} onChange={e=>set("phase",e.target.value)} style={{width:"100%",fontSize:13,padding:"8px 10px",border:`0.5px solid ${th.borderMid}`,borderRadius:8,outline:"none",color:th.textPrimary,background:th.inputBg}}>
                 <option value="1">Week 1-2</option><option value="2">Week 3-4</option><option value="3">Month 2</option>
@@ -435,6 +503,10 @@ function AddTaskModal({depts,onSave,onClose,theme}){
                 <option value="crit">Critical</option><option value="high">High</option><option value="med">Medium</option>
               </select>
             </div>
+          </div>
+          <div>
+            <div style={{fontSize:10,color:th.textTertiary,marginBottom:4,textTransform:"uppercase",letterSpacing:".05em"}}>Owner</div>
+            <OwnerSelect value={form.owner} onChange={v=>set("owner",v)} theme={th}/>
           </div>
           <div>
             <div style={{fontSize:10,color:th.textTertiary,marginBottom:4,textTransform:"uppercase",letterSpacing:".05em"}}>Notes</div>
@@ -453,8 +525,8 @@ function AddTaskModal({depts,onSave,onClose,theme}){
 
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App(){
-  const [session,setSession]=useState(undefined); // undefined = loading, null = signed out
-  const [allowedUser,setAllowedUser]=useState(null); // {email, display_name}
+  const [session,setSession]=useState(undefined);
+  const [allowedUser,setAllowedUser]=useState(null);
   const [authChecking,setAuthChecking]=useState(true);
   const [depts,setDepts]=useState(null);
   const [loading,setLoading]=useState(true);
@@ -482,13 +554,8 @@ export default function App(){
     inputBg:darkMode?"#2e2e2c":"#ffffff",
   };
 
-  // Load dark mode pref
-  useEffect(()=>{
-    const dm=localStorage.getItem("durus_dark");
-    if(dm==="1")setDarkMode(true);
-  },[]);
+  useEffect(()=>{const dm=localStorage.getItem("durus_dark");if(dm==="1")setDarkMode(true);},[]);
 
-  // Auth state listener
   useEffect(()=>{
     supabase.auth.getSession().then(({data:{session}})=>{
       setSession(session);
@@ -505,21 +572,13 @@ export default function App(){
 
   async function checkAllowed(email){
     setAuthChecking(true);
-    try{
-      const{data}=await supabase.from("allowed_users").select("*").eq("email",email).single();
-      setAllowedUser(data||null);
-    }catch(e){setAllowedUser(null);}
+    try{const{data}=await supabase.from("allowed_users").select("*").eq("email",email).single();setAllowedUser(data||null);}
+    catch(e){setAllowedUser(null);}
     setAuthChecking(false);
   }
 
-  const signOut=async()=>{
-    await supabase.auth.signOut();
-    setSession(null);
-    setAllowedUser(null);
-  };
-
-  // Current user display name from allowed_users or fall back to Google name
-  const currentUser = allowedUser?.display_name || session?.user?.user_metadata?.full_name || session?.user?.email?.split("@")[0] || "";
+  const signOut=async()=>{await supabase.auth.signOut();setSession(null);setAllowedUser(null);};
+  const currentUser=allowedUser?.display_name||session?.user?.user_metadata?.full_name||session?.user?.email?.split("@")[0]||"";
 
   function buildDepts(rows){
     const map={};
@@ -609,25 +668,11 @@ export default function App(){
 
   const toggleDark=()=>{const next=!darkMode;setDarkMode(next);localStorage.setItem("durus_dark",next?"1":"0");};
 
-  // ── Auth gate ───────────────────────────────────────────────────────────────
-  if(session===undefined||authChecking){
-    return(
-      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:theme.bg}}>
-        <div style={{fontSize:13,color:theme.textTertiary}}>Loading...</div>
-      </div>
-    );
-  }
+  // Auth gate
+  if(session===undefined||authChecking)return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:theme.bg}}><div style={{fontSize:13,color:theme.textTertiary}}>Loading...</div></div>;
   if(!session)return <SignInScreen theme={theme}/>;
   if(!allowedUser)return <AccessDenied email={session.user.email} theme={theme} onSignOut={signOut}/>;
-
-  // ── App ─────────────────────────────────────────────────────────────────────
-  if(loading||!depts){
-    return(
-      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:theme.bg}}>
-        <div style={{fontSize:13,color:theme.textTertiary}}>Loading dashboard...</div>
-      </div>
-    );
-  }
+  if(loading||!depts)return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:theme.bg}}><div style={{fontSize:13,color:theme.textTertiary}}>Loading dashboard...</div></div>;
 
   const allTasks=depts.flatMap(d=>d.tasks.map(t=>({...t,deptColor:d.color,deptName:d.name,deptId:d.id})));
   const total=allTasks.length;
@@ -680,7 +725,6 @@ export default function App(){
               <button onClick={toggleDark} style={{width:34,height:19,borderRadius:10,border:"none",background:darkMode?BRAND:"#d3d1c7",cursor:"pointer",position:"relative",flexShrink:0,padding:0}}>
                 <div style={{position:"absolute",top:2,left:darkMode?16:2,width:15,height:15,borderRadius:"50%",background:"#fff",transition:"left .2s"}}/>
               </button>
-              {/* User avatar with sign out */}
               <div style={{display:"flex",alignItems:"center",gap:6,background:theme.surface2,borderRadius:20,padding:"3px 10px 3px 5px"}}>
                 {session?.user?.user_metadata?.avatar_url
                   ?<img src={session.user.user_metadata.avatar_url} style={{width:22,height:22,borderRadius:"50%",objectFit:"cover"}} alt=""/>
@@ -714,6 +758,7 @@ export default function App(){
 
       <div style={{maxWidth:980,margin:"0 auto",padding:isMobile?"12px 12px":"20px 16px"}}>
 
+        {/* DASHBOARD */}
         {activeView==="dashboard"&&(
           <div>
             <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,minmax(0,1fr))",gap:isMobile?8:10,marginBottom:14}}>
@@ -801,14 +846,12 @@ export default function App(){
                 </div>
               </div>
               <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}`}</style>
-              <ChangelogFeed theme={theme} onTaskClick={(entry)=>{
-                const task=allTasks.find(t=>t.t===entry.task_title);
-                if(task)setOpenTask(task.id);
-              }}/>
+              <ChangelogFeed theme={theme} onTaskClick={(entry)=>{const task=allTasks.find(t=>t.t===entry.task_title);if(task)setOpenTask(task.id);}}/>
             </div>
           </div>
         )}
 
+        {/* TASKS */}
         {activeView==="tasks"&&(
           <div>
             <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10,alignItems:"center"}}>
@@ -859,7 +902,7 @@ export default function App(){
                             </div>
                           </div>
                         ):(
-                          <div key={task.id} style={{display:"grid",gridTemplateColumns:"20px 1fr 110px 80px 90px 80px",gap:8,alignItems:"start",padding:"8px 14px",borderBottom:`0.5px solid ${theme.border}`,cursor:"pointer"}}
+                          <div key={task.id} style={{display:"grid",gridTemplateColumns:"20px 1fr 140px 80px 90px 80px",gap:8,alignItems:"start",padding:"8px 14px",borderBottom:`0.5px solid ${theme.border}`,cursor:"pointer"}}
                             onClick={()=>setOpenTask(task.id)}>
                             <div onClick={e=>{e.stopPropagation();toggleStatus(task.id);}} style={{width:16,height:16,borderRadius:4,border:`1.5px solid ${task.status==="done"?"#3B6D11":theme.borderMid}`,background:task.status==="done"?"#3B6D11":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,cursor:"pointer",marginTop:1}}>
                               {task.status==="done"&&<div style={{width:8,height:5,borderLeft:"1.5px solid #fff",borderBottom:"1.5px solid #fff",transform:"rotate(-45deg) translate(0,1px)"}}/>}
@@ -869,7 +912,14 @@ export default function App(){
                               {task.note&&<div style={{fontSize:11,color:theme.textTertiary,marginTop:1}}>{task.note}</div>}
                               {(task.comments||[]).length>0&&<div style={{fontSize:10,color:"#185FA5",marginTop:2}}>{task.comments.length} comment{task.comments.length>1?"s":""}</div>}
                             </div>
-                            <div><span style={{fontSize:10,background:theme.surface2,color:theme.textSecondary,borderRadius:4,padding:"2px 7px"}}>{task.owner||"—"}</span></div>
+                            <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
+                              {(task.owner||"").split(",").map(s=>s.trim()).filter(Boolean).map(name=>(
+                                <span key={name} style={{display:"inline-flex",alignItems:"center",gap:3,background:avatarColor(name)+"22",color:avatarColor(name),borderRadius:10,padding:"1px 6px 1px 3px",fontSize:10,fontWeight:500,whiteSpace:"nowrap"}}>
+                                  <span style={{width:14,height:14,borderRadius:"50%",background:avatarColor(name),color:"#fff",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:700,flexShrink:0}}>{initials(name)}</span>
+                                  {name.split(" ")[0]}
+                                </span>
+                              ))}
+                            </div>
                             <div><PhasePill phase={parseInt(task.phase)}/></div>
                             <div><StatusBadge status={task.status}/></div>
                             <div><PriBadge p={task.p}/></div>
@@ -884,10 +934,11 @@ export default function App(){
           </div>
         )}
 
+        {/* TIMELINE */}
         {activeView==="timeline"&&(
           isMobile?(
             <div style={{background:theme.surface,border:`0.5px solid ${theme.border}`,borderRadius:12,padding:"24px 16px",textAlign:"center"}}>
-              <div style={{fontSize:13,color:theme.textSecondary,lineHeight:1.6}}>The timeline view is best on a larger screen. Rotate your device to landscape or open on desktop for the full Gantt chart.</div>
+              <div style={{fontSize:13,color:theme.textSecondary,lineHeight:1.6}}>The timeline view is best on a larger screen. Rotate your device to landscape or open on desktop.</div>
             </div>
           ):(
             <div style={{background:theme.surface,border:`0.5px solid ${theme.border}`,borderRadius:12,padding:"16px 18px",overflowX:"auto"}}>
@@ -924,6 +975,7 @@ export default function App(){
           )
         )}
 
+        {/* TEAM */}
         {activeView==="team"&&(
           <div>
             <div style={{fontSize:12,color:theme.textTertiary,marginBottom:12}}>Click any team member to see their tasks. Your card is expanded by default.</div>
@@ -935,6 +987,7 @@ export default function App(){
           </div>
         )}
 
+        {/* RISKS */}
         {activeView==="risks"&&(
           <div>
             {[
@@ -959,6 +1012,7 @@ export default function App(){
         )}
       </div>
 
+      {/* Mobile bottom tab bar */}
       {isMobile&&(
         <div style={{position:"fixed",bottom:0,left:0,right:0,background:theme.surface,borderTop:`0.5px solid ${theme.border}`,display:"flex",zIndex:100,paddingBottom:"env(safe-area-inset-bottom)"}}>
           {TAB_VIEWS.map((id,i)=>(
@@ -971,16 +1025,10 @@ export default function App(){
       )}
 
       {openTask&&openTaskObj&&(
-        <TaskModal
-          task={openTaskObj}
-          deptColor={openTaskDept?.color||"#888780"}
-          deptName={openTaskDept?.name||""}
-          currentUser={currentUser}
+        <TaskModal task={openTaskObj} deptColor={openTaskDept?.color||"#888780"} deptName={openTaskDept?.name||""} currentUser={currentUser}
           onSave={(updated)=>saveTask(updated,openTaskObj,openTaskDept?.name)}
           onDelete={(id)=>deleteTask(id,openTaskObj?.t,openTaskDept?.name)}
-          onClose={()=>setOpenTask(null)}
-          theme={theme}
-        />
+          onClose={()=>setOpenTask(null)} theme={theme}/>
       )}
       {showAddTask&&(
         <AddTaskModal depts={depts} onSave={addTask} onClose={()=>setShowAddTask(false)} theme={theme}/>
