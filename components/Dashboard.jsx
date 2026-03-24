@@ -75,7 +75,9 @@ const DEFAULT_DEPTS = [
 
 const PHASE_LABELS = {"1":"Wk 1-2","2":"Wk 3-4","3":"Mo 2"};
 const PRI_LABELS = {crit:"Critical",high:"High",med:"Medium"};
+const PRI_ORDER = {crit:0,high:1,med:2};
 const BRAND = "#BCF000";
+const STATUS_DOT_COLORS = {open:"#888780","in-progress":"#185FA5",blocked:"#993C1D",done:"#3B6D11"};
 
 const TEAM_PEOPLE = [
   {name:"Rene Suarez",   email:"r.suarez@hyten.co"},
@@ -629,6 +631,7 @@ export default function App(){
   const [showProfile,setShowProfile]=useState(false);
   const [profileColor,setProfileColor]=useState(null);
   const [profileAvatar,setProfileAvatar]=useState(null);
+  const [myTasksSort,setMyTasksSort]=useState("priority");
   const isMobile=useIsMobile();
 
   const theme={
@@ -802,12 +805,13 @@ export default function App(){
   const openTaskObj=openTask?allTasks.find(t=>t.id===openTask):null;
   const openTaskDept=openTask?depts.find(d=>d.tasks.some(t=>t.id===openTask)):null;
 
-  const TAB_VIEWS=["dashboard","tasks","team","risks"];
-  const TAB_LABELS=["Home","Tasks","Team","Risks"];
+  const TAB_VIEWS=["dashboard","tasks","mytasks","team","risks"];
+  const TAB_LABELS=["Home","Tasks","My Tasks","Team","Risks"];
   const TAB_ICONS={
     dashboard:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>,
     tasks:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><polyline points="3 6 4 7 6 5"/><polyline points="3 12 4 13 6 11"/><polyline points="3 18 4 19 6 17"/></svg>,
     team:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+    mytasks:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><polyline points="9 11 11 13 15 9" style={{display:"none"}}/></svg>,
     risks:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
   };
 
@@ -850,6 +854,7 @@ export default function App(){
               <NavBtn id="dashboard" label="Dashboard"/>
               <NavBtn id="tasks" label="All tasks"/>
               <NavBtn id="timeline" label="Timeline"/>
+              <NavBtn id="mytasks" label="My Tasks"/>
               <NavBtn id="team" label="Team"/>
               <NavBtn id="risks" label="Risks"/>
             </div>
@@ -1093,6 +1098,101 @@ export default function App(){
             </div>
           </div>
         )}
+
+        {/* MY TASKS */}
+        {activeView==="mytasks"&&(()=>{
+          const sortedMembers=[...TEAM_MEMBERS].sort((a,b)=>{
+            if(a.name===currentUser)return -1;
+            if(b.name===currentUser)return 1;
+            return 0;
+          });
+          const totalOpen=allTasks.filter(t=>t.status!=="done").length;
+          return(
+            <div>
+              {/* Header + sort toggle */}
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
+                <div>
+                  <span style={{fontSize:14,fontWeight:600,color:theme.textPrimary}}>Tasks by person</span>
+                  <span style={{fontSize:12,color:theme.textTertiary,marginLeft:8}}>{totalOpen} open</span>
+                </div>
+                <div style={{display:"flex",background:theme.surface,border:`0.5px solid ${theme.borderMid}`,borderRadius:8,padding:3,gap:2}}>
+                  {[["priority","Highest priority"],["phase","Timeline (phase)"]].map(([val,label])=>(
+                    <button key={val} onClick={()=>setMyTasksSort(val)}
+                      style={{padding:"5px 12px",borderRadius:6,fontSize:12,fontWeight:500,border:"none",background:myTasksSort===val?BRAND:"transparent",color:myTasksSort===val?"#2c2c2a":theme.textSecondary,cursor:"pointer",whiteSpace:"nowrap",transition:"background .15s"}}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Person cards */}
+              {sortedMembers.map(person=>{
+                const isMe=person.name===currentUser;
+                const personColor=isMe?effectiveColor:person.color;
+                const personBg=isMe?effectiveColor+"18":person.bg;
+                const tasks=allTasks.filter(t=>(t.owner||"").split(",").map(s=>s.trim()).includes(person.name));
+                const openTasks=tasks.filter(t=>t.status!=="done");
+                const doneTasks=tasks.filter(t=>t.status==="done");
+                const critCount=openTasks.filter(t=>t.p==="crit").length;
+                const blockedCount=openTasks.filter(t=>t.status==="blocked").length;
+                const sortedOpen=myTasksSort==="priority"
+                  ?[...openTasks].sort((a,b)=>(PRI_ORDER[a.p]??2)-(PRI_ORDER[b.p]??2))
+                  :[...openTasks].sort((a,b)=>(parseInt(a.phase)||1)-(parseInt(b.phase)||1));
+                const allSorted=[...sortedOpen,...doneTasks];
+                return(
+                  <div key={person.name} style={{background:theme.surface,border:`0.5px solid ${isMe?BRAND:theme.border}`,borderRadius:12,marginBottom:10,overflow:"hidden"}}>
+                    {/* Person header */}
+                    <div style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",borderBottom:tasks.length>0?`0.5px solid ${theme.border}`:"none"}}>
+                      <div style={{width:38,height:38,borderRadius:"50%",background:personBg,color:personColor,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:600,flexShrink:0,position:"relative"}}>
+                        {isMe&&effectiveAvatar
+                          ?<img src={effectiveAvatar} style={{width:38,height:38,borderRadius:"50%",objectFit:"cover",position:"absolute",inset:0}} alt=""/>
+                          :person.initials
+                        }
+                        {isMe&&<div style={{position:"absolute",bottom:0,right:0,width:10,height:10,borderRadius:"50%",background:BRAND,border:`2px solid ${theme.surface}`}}/>}
+                      </div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                          <span style={{fontSize:13,fontWeight:500,color:theme.textPrimary}}>{person.name}</span>
+                          {isMe&&<span style={{fontSize:9,fontWeight:600,background:BRAND,color:"#2c2c2a",borderRadius:6,padding:"1px 5px",textTransform:"uppercase",letterSpacing:".04em"}}>You</span>}
+                        </div>
+                        <div style={{fontSize:11,color:theme.textTertiary}}>{person.title}</div>
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+                        {critCount>0&&<span style={{fontSize:10,padding:"2px 7px",borderRadius:10,background:"#FAECE7",color:"#993C1D",fontWeight:600}}>{critCount} critical</span>}
+                        {blockedCount>0&&<span style={{fontSize:10,padding:"2px 7px",borderRadius:10,background:"#FAEEDA",color:"#854F0B",fontWeight:600}}>{blockedCount} blocked</span>}
+                        <span style={{fontSize:11,color:theme.textTertiary}}>{doneTasks.length}/{tasks.length} done</span>
+                      </div>
+                    </div>
+
+                    {/* Task rows */}
+                    {tasks.length===0&&<div style={{padding:"12px 14px",fontSize:12,color:theme.textTertiary}}>No tasks assigned.</div>}
+                    {allSorted.map((task,i)=>{
+                      const isDone=task.status==="done";
+                      return(
+                        <div key={task.id} onClick={()=>setOpenTask(task.id)}
+                          style={{display:"flex",alignItems:"center",gap:10,padding:"9px 14px",borderBottom:i<allSorted.length-1?`0.5px solid ${theme.border}`:"none",cursor:"pointer",opacity:isDone?0.55:1}}
+                          onMouseEnter={e=>e.currentTarget.style.background=theme.surface2}
+                          onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                          <div style={{width:7,height:7,borderRadius:"50%",background:STATUS_DOT_COLORS[task.status]||"#888780",flexShrink:0}}/>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontSize:12,color:isDone?theme.textTertiary:theme.textPrimary,textDecoration:isDone?"line-through":"none",lineHeight:1.35,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{task.t}</div>
+                            <div style={{display:"flex",gap:4,marginTop:3,flexWrap:"wrap",alignItems:"center"}}>
+                              <PriBadge p={task.p}/>
+                              <PhasePill phase={parseInt(task.phase)}/>
+                              {task.status!=="open"&&<StatusBadge status={task.status}/>}
+                              {task.deptName&&<span style={{fontSize:10,color:theme.textTertiary}}>{task.deptName}</span>}
+                            </div>
+                          </div>
+                          <span style={{fontSize:12,color:theme.textTertiary,flexShrink:0}}>›</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
 
         {/* RISKS */}
         {activeView==="risks"&&(
