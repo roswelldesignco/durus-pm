@@ -385,22 +385,24 @@ export default function App() {
 
   if (!userSet) {
     return (
-      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f5f5f3",padding:20}}>
-        <div style={{background:"#fff",borderRadius:14,padding:"32px 28px",maxWidth:360,width:"100%",border:"0.5px solid #e8e7e3"}}>
-          <div style={{fontSize:13,fontWeight:600,color:"#888780",letterSpacing:".06em",textTransform:"uppercase",marginBottom:6}}>Durus Roofing</div>
-          <div style={{fontSize:20,fontWeight:500,color:"#2c2c2a",marginBottom:6}}>Welcome to the project tracker</div>
-          <div style={{fontSize:13,color:"#5f5e5a",marginBottom:20,lineHeight:1.6}}>Enter your name so your teammates know who is making updates.</div>
-          <div style={{fontSize:11,color:"#888780",marginBottom:6,textTransform:"uppercase",letterSpacing:".05em"}}>Your name</div>
-          <input value={userInput} onChange={e=>setUserInput(e.target.value)}
-            onKeyDown={e=>{if(e.key==="Enter"&&userInput.trim()){localStorage.setItem("durus_user",userInput.trim());setCurrentUser(userInput.trim());setUserSet(true);}}}
-            placeholder="e.g. Jesse"
-            style={{width:"100%",fontSize:14,padding:"9px 12px",border:"0.5px solid #d3d1c7",borderRadius:8,outline:"none",color:"#2c2c2a",marginBottom:12}}/>
-          <button onClick={()=>{if(userInput.trim()){localStorage.setItem("durus_user",userInput.trim());setCurrentUser(userInput.trim());setUserSet(true);}}}
-            style={{width:"100%",padding:"10px",borderRadius:8,border:"none",background:"#2c2c2a",color:"#fff",fontSize:13,fontWeight:500,cursor:"pointer"}}>
-            Enter dashboard
-          </button>
-        </div>
+  <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f5f5f3",padding:20}}>
+    <div style={{background:"#fff",borderRadius:14,padding:"32px 28px",maxWidth:360,width:"100%",border:"0.5px solid #e8e7e3"}}>
+      <div style={{textAlign:"center",marginBottom:20}}>
+        <img src="https://drive.google.com/uc?export=view&id=1hs9kPTNa9rmZ9ZYPIy3IO_nD_JYRydz0" alt="Durus Roofing" style={{height:48,objectFit:"contain"}}/>
       </div>
+      <div style={{fontSize:20,fontWeight:500,color:"#2c2c2a",marginBottom:6}}>Welcome to the project tracker</div>
+      <div style={{fontSize:13,color:"#5f5e5a",marginBottom:20,lineHeight:1.6}}>Enter your name so your teammates know who is making updates.</div>
+      <div style={{fontSize:11,color:"#888780",marginBottom:6,textTransform:"uppercase",letterSpacing:".05em"}}>Your name</div>
+      <input value={userInput} onChange={e=>setUserInput(e.target.value)}
+        onKeyDown={e=>{if(e.key==="Enter"&&userInput.trim()){localStorage.setItem("durus_user",userInput.trim());setCurrentUser(userInput.trim());setUserSet(true);}}}
+        placeholder="e.g. Jesse"
+        style={{width:"100%",fontSize:14,padding:"9px 12px",border:"0.5px solid #d3d1c7",borderRadius:8,outline:"none",color:"#2c2c2a",background:"#ffffff",marginBottom:12}}/>
+      <button onClick={()=>{if(userInput.trim()){localStorage.setItem("durus_user",userInput.trim());setCurrentUser(userInput.trim());setUserSet(true);}}}
+        style={{width:"100%",padding:"10px",borderRadius:8,border:"none",background:"#BCF000",color:"#2c2c2a",fontSize:13,fontWeight:600,cursor:"pointer"}}>
+        Enter dashboard
+      </button>
+    </div>
+  </div>
     );
   }
 
