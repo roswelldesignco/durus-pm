@@ -102,8 +102,8 @@ const TEAM_MEMBERS = [
 ];
 
 function uid(){return Math.random().toString(36).slice(2,10);}
-function rowToTask(row){return{id:row.id,t:row.title,note:row.note||"",owner:row.owner||"",phase:row.phase||"1",p:row.priority||"high",status:row.status||"open",comments:row.comments||[],attachments:row.attachments||[]};}
-function taskToRow(task,deptId){return{id:task.id,dept_id:deptId,title:task.t,note:task.note||"",owner:task.owner||"",phase:task.phase,priority:task.p,status:task.status,comments:task.comments||[],attachments:task.attachments||[],updated_at:new Date().toISOString()};}
+function rowToTask(row){return{id:row.id,t:row.title,note:row.note||"",owner:row.owner||"",phase:row.phase||"1",p:row.priority||"high",status:row.status||"open",due:row.due||"",comments:row.comments||[],attachments:row.attachments||[]};}
+function taskToRow(task,deptId){return{id:task.id,dept_id:deptId,title:task.t,note:task.note||"",owner:task.owner||"",phase:task.phase,priority:task.p,status:task.status,due:task.due||"",comments:task.comments||[],attachments:task.attachments||[],updated_at:new Date().toISOString()};}
 
 function timeAgo(ts){
   const s=Math.floor((Date.now()-new Date(ts))/1000);
@@ -473,8 +473,8 @@ function TaskModal({task,deptColor,deptName,currentUser,onSave,onDelete,onClose,
           <button onClick={onClose} style={{border:"none",background:"none",fontSize:22,color:th.textTertiary,cursor:"pointer",lineHeight:1,padding:"0 4px"}}>×</button>
         </div>
         <div style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:14}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
-            {[["Status","status",[["open","Open"],["in-progress","In progress"],["blocked","Blocked"],["done","Done"]]],["Priority","p",[["crit","Critical"],["high","High"],["med","Medium"]]],["Phase","phase",[["1","Wk 1-2"],["2","Wk 3-4"],["3","Month 2"]]]].map(([label,key,opts])=>(
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}>
+            {[["Status","status",[["open","Open"],["in-progress","In progress"],["blocked","Blocked"],["done","Done"]]],["Priority","p",[["crit","Critical"],["high","High"],["med","Medium"]]]].map(([label,key,opts])=>(
               <div key={key}>
                 <div style={{fontSize:10,color:th.textTertiary,marginBottom:4,textTransform:"uppercase",letterSpacing:".05em"}}>{label}</div>
                 <select value={form[key]} onChange={e=>set(key,e.target.value)} style={{width:"100%",fontSize:13,padding:"7px 8px",border:`0.5px solid ${th.borderMid}`,borderRadius:8,outline:"none",color:th.textPrimary,background:th.inputBg}}>
@@ -482,6 +482,17 @@ function TaskModal({task,deptColor,deptName,currentUser,onSave,onDelete,onClose,
                 </select>
               </div>
             ))}
+            <div>
+              <div style={{fontSize:10,color:th.textTertiary,marginBottom:4,textTransform:"uppercase",letterSpacing:".05em"}}>Due</div>
+              <input type="date" value={form.due||""} onChange={e=>set("due",e.target.value)}
+                style={{width:"100%",fontSize:13,padding:"7px 8px",border:`0.5px solid ${th.borderMid}`,borderRadius:8,outline:"none",color:form.due?th.textPrimary:th.textTertiary,background:th.inputBg,boxSizing:"border-box"}}/>
+            </div>
+            <div>
+              <div style={{fontSize:10,color:th.textTertiary,marginBottom:4,textTransform:"uppercase",letterSpacing:".05em"}}>Phase</div>
+              <select value={form.phase} onChange={e=>set("phase",e.target.value)} style={{width:"100%",fontSize:13,padding:"7px 8px",border:`0.5px solid ${th.borderMid}`,borderRadius:8,outline:"none",color:th.textPrimary,background:th.inputBg}}>
+                <option value="1">Wk 1-2</option><option value="2">Wk 3-4</option><option value="3">Month 2</option>
+              </select>
+            </div>
           </div>
           <div>
             <div style={{fontSize:10,color:th.textTertiary,marginBottom:4,textTransform:"uppercase",letterSpacing:".05em"}}>Owner</div>
@@ -574,7 +585,7 @@ function TaskModal({task,deptColor,deptName,currentUser,onSave,onDelete,onClose,
 // ── Add task modal ────────────────────────────────────────────────────────────
 function AddTaskModal({depts,onSave,onClose,theme,colorMap={}}){
   const th=theme||{border:"#e8e7e3",borderMid:"#d3d1c7",textPrimary:"#2c2c2a",textSecondary:"#5f5e5a",textTertiary:"#888780",inputBg:"#ffffff",surface:"#ffffff"};
-  const [form,setForm]=useState({t:"",note:"",owner:"",phase:"1",p:"high",deptId:depts[0]?.id||"",status:"open",comments:[]});
+  const [form,setForm]=useState({t:"",note:"",owner:"",phase:"1",p:"high",due:"",deptId:depts[0]?.id||"",status:"open",comments:[],attachments:[]});
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
   const valid=form.t.trim()&&form.deptId;
   return(
@@ -608,6 +619,11 @@ function AddTaskModal({depts,onSave,onClose,theme,colorMap={}}){
               <select value={form.p} onChange={e=>set("p",e.target.value)} style={{width:"100%",fontSize:13,padding:"8px 10px",border:`0.5px solid ${th.borderMid}`,borderRadius:8,outline:"none",color:th.textPrimary,background:th.inputBg}}>
                 <option value="crit">Critical</option><option value="high">High</option><option value="med">Medium</option>
               </select>
+            </div>
+            <div>
+              <div style={{fontSize:10,color:th.textTertiary,marginBottom:4,textTransform:"uppercase",letterSpacing:".05em"}}>Due</div>
+              <input type="date" value={form.due||""} onChange={e=>set("due",e.target.value)}
+                style={{width:"100%",fontSize:13,padding:"8px 10px",border:`0.5px solid ${th.borderMid}`,borderRadius:8,outline:"none",color:form.due?th.textPrimary:th.textTertiary,background:th.inputBg,boxSizing:"border-box"}}/>
             </div>
           </div>
           <div>
@@ -736,6 +752,8 @@ export default function App(){
   const [profileColor,setProfileColor]=useState(null);
   const [profileAvatar,setProfileAvatar]=useState(null);
   const [myTasksSort,setMyTasksSort]=useState("priority");
+  const [calMonth,setCalMonth]=useState(()=>{const d=new Date();d.setDate(1);return d;});
+  const [calHiddenMembers,setCalHiddenMembers]=useState(()=>new Set());
   const isMobile=useIsMobile();
 
   const theme={
@@ -909,13 +927,14 @@ export default function App(){
   const openTaskObj=openTask?allTasks.find(t=>t.id===openTask):null;
   const openTaskDept=openTask?depts.find(d=>d.tasks.some(t=>t.id===openTask)):null;
 
-  const TAB_VIEWS=["dashboard","tasks","mytasks","team","risks"];
-  const TAB_LABELS=["Home","Tasks","My Tasks","Team","Risks"];
+  const TAB_VIEWS=["dashboard","tasks","mytasks","calendar","team","risks"];
+  const TAB_LABELS=["Home","Tasks","My Tasks","Calendar","Team","Risks"];
   const TAB_ICONS={
     dashboard:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>,
     tasks:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><polyline points="3 6 4 7 6 5"/><polyline points="3 12 4 13 6 11"/><polyline points="3 18 4 19 6 17"/></svg>,
     team:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
-    mytasks:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><polyline points="9 11 11 13 15 9" style={{display:"none"}}/></svg>,
+    mytasks:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>,
+    calendar:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
     risks:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
   };
 
@@ -957,8 +976,8 @@ export default function App(){
             <div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:2}}>
               <NavBtn id="dashboard" label="Dashboard"/>
               <NavBtn id="tasks" label="All tasks"/>
-              <NavBtn id="timeline" label="Timeline"/>
               <NavBtn id="mytasks" label="My Tasks"/>
+              <NavBtn id="calendar" label="Calendar"/>
               <NavBtn id="team" label="Team"/>
               <NavBtn id="risks" label="Risks"/>
             </div>
@@ -1282,6 +1301,151 @@ export default function App(){
                   );
                 })}
               </div>
+            </div>
+          );
+        })()}
+
+        {/* CALENDAR */}
+        {activeView==="calendar"&&(()=>{
+          const MONTH_NAMES=["January","February","March","April","May","June","July","August","September","October","November","December"];
+          const DOW=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+          const year=calMonth.getFullYear();
+          const month=calMonth.getMonth();
+          const firstDow=new Date(year,month,1).getDay();
+          const daysInMonth=new Date(year,month+1,0).getDate();
+          const totalCells=Math.ceil((firstDow+daysInMonth)/7)*7;
+          const cells=Array.from({length:totalCells},(_,i)=>new Date(year,month,i-firstDow+1));
+          const todayStr=new Date().toISOString().slice(0,10);
+
+          const toggleMember=(name)=>setCalHiddenMembers(prev=>{
+            const next=new Set(prev);
+            if(next.has(name))next.delete(name);else next.add(name);
+            return next;
+          });
+
+          // Build a per-member color map (current user uses effectiveColor)
+          const memberColorOf=(name)=>{
+            if(name===currentUser)return effectiveColor;
+            return TEAM_MEMBERS.find(m=>m.name===name)?.color||avatarColor(name);
+          };
+
+          // Tasks visible on calendar (filter hidden members)
+          const visibleTasks=allTasks.filter(t=>{
+            if(t.status==="done")return false;
+            const owners=(t.owner||"").split(",").map(s=>s.trim()).filter(Boolean);
+            if(owners.length===0)return true;
+            return owners.some(o=>!calHiddenMembers.has(o));
+          });
+
+          // Group tasks-with-due by date string
+          const byDate={};
+          visibleTasks.filter(t=>t.due).forEach(t=>{
+            if(!byDate[t.due])byDate[t.due]=[];
+            byDate[t.due].push(t);
+          });
+
+          // Tasks without a due date
+          const noDueTasks=visibleTasks.filter(t=>!t.due);
+
+          const prevMonth=()=>setCalMonth(new Date(year,month-1,1));
+          const nextMonth=()=>setCalMonth(new Date(year,month+1,1));
+          const goToday=()=>{const d=new Date();d.setDate(1);setCalMonth(d);};
+
+          const btnBase={border:`0.5px solid ${theme.borderMid}`,borderRadius:8,background:"transparent",color:theme.textSecondary,cursor:"pointer",fontSize:13,padding:"5px 10px"};
+
+          // All members for the filter row (team + current user if not in team)
+          const filterMembers=[...TEAM_MEMBERS.map(m=>({name:m.name,initials:m.initials,color:m.color}))];
+          if(!filterMembers.find(m=>m.name===currentUser)){
+            filterMembers.unshift({name:currentUser,initials:initials(currentUser),color:effectiveColor});
+          }
+
+          return(
+            <div>
+              {/* Header row */}
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <button onClick={prevMonth} style={{...btnBase,padding:"5px 12px",fontSize:16,lineHeight:1}}>‹</button>
+                  <span style={{fontSize:15,fontWeight:600,color:theme.textPrimary,minWidth:170,textAlign:"center"}}>{MONTH_NAMES[month]} {year}</span>
+                  <button onClick={nextMonth} style={{...btnBase,padding:"5px 12px",fontSize:16,lineHeight:1}}>›</button>
+                  <button onClick={goToday} style={{...btnBase,fontSize:12}}>Today</button>
+                </div>
+                {/* Member visibility toggles */}
+                <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                  {filterMembers.map(m=>{
+                    const hidden=calHiddenMembers.has(m.name);
+                    return(
+                      <button key={m.name} onClick={()=>toggleMember(m.name)} title={m.name}
+                        style={{display:"flex",alignItems:"center",gap:5,padding:"4px 9px",borderRadius:20,border:`1px solid ${hidden?theme.borderMid:m.color}`,background:hidden?"transparent":m.color+"1a",color:hidden?theme.textTertiary:m.color,fontSize:11,fontWeight:500,cursor:"pointer",transition:"all .15s"}}>
+                        <span style={{width:17,height:17,borderRadius:"50%",background:hidden?"transparent":m.color,border:`1.5px solid ${m.color}`,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:700,color:hidden?m.color:"#fff",flexShrink:0}}>{m.initials}</span>
+                        {m.name.split(" ")[0]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Day-of-week header */}
+              <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:2}}>
+                {DOW.map(d=>(
+                  <div key={d} style={{textAlign:"center",fontSize:11,fontWeight:600,color:theme.textTertiary,padding:"4px 0",textTransform:"uppercase",letterSpacing:".04em"}}>{d}</div>
+                ))}
+              </div>
+
+              {/* Calendar grid */}
+              <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
+                {cells.map((date,i)=>{
+                  const key=date.toISOString().slice(0,10);
+                  const isCurrentMonth=date.getMonth()===month;
+                  const isToday=key===todayStr;
+                  const dayTasks=byDate[key]||[];
+                  const maxShow=isMobile?2:3;
+                  return(
+                    <div key={i} style={{minHeight:isMobile?62:84,background:isToday?BRAND+"0d":theme.surface,border:`0.5px solid ${isToday?BRAND:theme.border}`,borderRadius:8,padding:"5px 5px 4px",opacity:isCurrentMonth?1:0.35,overflow:"hidden",boxSizing:"border-box"}}>
+                      <div style={{fontSize:11,fontWeight:isToday?700:400,color:isToday?BRAND:theme.textPrimary,marginBottom:3,lineHeight:1}}>{date.getDate()}</div>
+                      {dayTasks.slice(0,maxShow).map(t=>{
+                        const owners=(t.owner||"").split(",").map(s=>s.trim()).filter(Boolean);
+                        const taskColor=owners.length?memberColorOf(owners[0]):t.deptColor||"#888780";
+                        return(
+                          <div key={t.id} onClick={()=>setOpenTask(t.id)}
+                            title={t.t}
+                            style={{fontSize:10,lineHeight:1.3,background:taskColor+"22",color:taskColor,borderRadius:4,padding:"2px 5px",marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",cursor:"pointer",fontWeight:500}}>
+                            {t.t}
+                          </div>
+                        );
+                      })}
+                      {dayTasks.length>maxShow&&(
+                        <div style={{fontSize:9,color:theme.textTertiary,paddingLeft:2}}>+{dayTasks.length-maxShow} more</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* No due date section */}
+              {noDueTasks.length>0&&(
+                <div style={{marginTop:20}}>
+                  <div style={{fontSize:11,fontWeight:600,color:theme.textTertiary,textTransform:"uppercase",letterSpacing:".05em",marginBottom:8}}>No due date — {noDueTasks.length} task{noDueTasks.length!==1?"s":""}</div>
+                  <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:6}}>
+                    {noDueTasks.map(t=>{
+                      const owners=(t.owner||"").split(",").map(s=>s.trim()).filter(Boolean);
+                      const taskColor=owners.length?memberColorOf(owners[0]):t.deptColor||"#888780";
+                      return(
+                        <div key={t.id} onClick={()=>setOpenTask(t.id)}
+                          style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",background:theme.surface,border:`0.5px solid ${theme.border}`,borderRadius:8,cursor:"pointer"}}
+                          onMouseEnter={e=>e.currentTarget.style.background=theme.surface2}
+                          onMouseLeave={e=>e.currentTarget.style.background=theme.surface}>
+                          <div style={{width:6,height:6,borderRadius:"50%",background:taskColor,flexShrink:0}}/>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontSize:12,color:theme.textPrimary,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.t}</div>
+                            <div style={{fontSize:10,color:theme.textTertiary}}>{t.deptName}{owners.length?` · ${owners[0]}`:""}  </div>
+                          </div>
+                          <PriBadge p={t.p}/>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           );
         })()}
