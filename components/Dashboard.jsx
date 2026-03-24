@@ -1101,19 +1101,23 @@ export default function App(){
 
         {/* MY TASKS */}
         {activeView==="mytasks"&&(()=>{
-          const sortedMembers=[...TEAM_MEMBERS].sort((a,b)=>{
-            if(a.name===currentUser)return -1;
-            if(b.name===currentUser)return 1;
-            return 0;
-          });
-          const totalOpen=allTasks.filter(t=>t.status!=="done").length;
+          const myTasks=allTasks.filter(t=>(t.owner||"").split(",").map(s=>s.trim()).includes(currentUser));
+          const openTasks=myTasks.filter(t=>t.status!=="done");
+          const doneTasks=myTasks.filter(t=>t.status==="done");
+          const critCount=openTasks.filter(t=>t.p==="crit").length;
+          const blockedCount=openTasks.filter(t=>t.status==="blocked").length;
+          const sortedOpen=myTasksSort==="priority"
+            ?[...openTasks].sort((a,b)=>(PRI_ORDER[a.p]??2)-(PRI_ORDER[b.p]??2))
+            :[...openTasks].sort((a,b)=>(parseInt(a.phase)||1)-(parseInt(b.phase)||1));
+          const allSorted=[...sortedOpen,...doneTasks];
+          const meInTeam=TEAM_MEMBERS.find(p=>p.name===currentUser);
           return(
             <div>
               {/* Header + sort toggle */}
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
                 <div>
-                  <span style={{fontSize:14,fontWeight:600,color:theme.textPrimary}}>Tasks by person</span>
-                  <span style={{fontSize:12,color:theme.textTertiary,marginLeft:8}}>{totalOpen} open</span>
+                  <span style={{fontSize:14,fontWeight:600,color:theme.textPrimary}}>My Tasks</span>
+                  <span style={{fontSize:12,color:theme.textTertiary,marginLeft:8}}>{openTasks.length} open</span>
                 </div>
                 <div style={{display:"flex",background:theme.surface,border:`0.5px solid ${theme.borderMid}`,borderRadius:8,padding:3,gap:2}}>
                   {[["priority","Highest priority"],["phase","Timeline (phase)"]].map(([val,label])=>(
@@ -1125,71 +1129,55 @@ export default function App(){
                 </div>
               </div>
 
-              {/* Person cards */}
-              {sortedMembers.map(person=>{
-                const isMe=person.name===currentUser;
-                const personColor=isMe?effectiveColor:person.color;
-                const personBg=isMe?effectiveColor+"18":person.bg;
-                const tasks=allTasks.filter(t=>(t.owner||"").split(",").map(s=>s.trim()).includes(person.name));
-                const openTasks=tasks.filter(t=>t.status!=="done");
-                const doneTasks=tasks.filter(t=>t.status==="done");
-                const critCount=openTasks.filter(t=>t.p==="crit").length;
-                const blockedCount=openTasks.filter(t=>t.status==="blocked").length;
-                const sortedOpen=myTasksSort==="priority"
-                  ?[...openTasks].sort((a,b)=>(PRI_ORDER[a.p]??2)-(PRI_ORDER[b.p]??2))
-                  :[...openTasks].sort((a,b)=>(parseInt(a.phase)||1)-(parseInt(b.phase)||1));
-                const allSorted=[...sortedOpen,...doneTasks];
-                return(
-                  <div key={person.name} style={{background:theme.surface,border:`0.5px solid ${isMe?BRAND:theme.border}`,borderRadius:12,marginBottom:10,overflow:"hidden"}}>
-                    {/* Person header */}
-                    <div style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",borderBottom:tasks.length>0?`0.5px solid ${theme.border}`:"none"}}>
-                      <div style={{width:38,height:38,borderRadius:"50%",background:personBg,color:personColor,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:600,flexShrink:0,position:"relative"}}>
-                        {isMe&&effectiveAvatar
-                          ?<img src={effectiveAvatar} style={{width:38,height:38,borderRadius:"50%",objectFit:"cover",position:"absolute",inset:0}} alt=""/>
-                          :person.initials
-                        }
-                        {isMe&&<div style={{position:"absolute",bottom:0,right:0,width:10,height:10,borderRadius:"50%",background:BRAND,border:`2px solid ${theme.surface}`}}/>}
-                      </div>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                          <span style={{fontSize:13,fontWeight:500,color:theme.textPrimary}}>{person.name}</span>
-                          {isMe&&<span style={{fontSize:9,fontWeight:600,background:BRAND,color:"#2c2c2a",borderRadius:6,padding:"1px 5px",textTransform:"uppercase",letterSpacing:".04em"}}>You</span>}
-                        </div>
-                        <div style={{fontSize:11,color:theme.textTertiary}}>{person.title}</div>
-                      </div>
-                      <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
-                        {critCount>0&&<span style={{fontSize:10,padding:"2px 7px",borderRadius:10,background:"#FAECE7",color:"#993C1D",fontWeight:600}}>{critCount} critical</span>}
-                        {blockedCount>0&&<span style={{fontSize:10,padding:"2px 7px",borderRadius:10,background:"#FAEEDA",color:"#854F0B",fontWeight:600}}>{blockedCount} blocked</span>}
-                        <span style={{fontSize:11,color:theme.textTertiary}}>{doneTasks.length}/{tasks.length} done</span>
-                      </div>
-                    </div>
-
-                    {/* Task rows */}
-                    {tasks.length===0&&<div style={{padding:"12px 14px",fontSize:12,color:theme.textTertiary}}>No tasks assigned.</div>}
-                    {allSorted.map((task,i)=>{
-                      const isDone=task.status==="done";
-                      return(
-                        <div key={task.id} onClick={()=>setOpenTask(task.id)}
-                          style={{display:"flex",alignItems:"center",gap:10,padding:"9px 14px",borderBottom:i<allSorted.length-1?`0.5px solid ${theme.border}`:"none",cursor:"pointer",opacity:isDone?0.55:1}}
-                          onMouseEnter={e=>e.currentTarget.style.background=theme.surface2}
-                          onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                          <div style={{width:7,height:7,borderRadius:"50%",background:STATUS_DOT_COLORS[task.status]||"#888780",flexShrink:0}}/>
-                          <div style={{flex:1,minWidth:0}}>
-                            <div style={{fontSize:12,color:isDone?theme.textTertiary:theme.textPrimary,textDecoration:isDone?"line-through":"none",lineHeight:1.35,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{task.t}</div>
-                            <div style={{display:"flex",gap:4,marginTop:3,flexWrap:"wrap",alignItems:"center"}}>
-                              <PriBadge p={task.p}/>
-                              <PhasePill phase={parseInt(task.phase)}/>
-                              {task.status!=="open"&&<StatusBadge status={task.status}/>}
-                              {task.deptName&&<span style={{fontSize:10,color:theme.textTertiary}}>{task.deptName}</span>}
-                            </div>
-                          </div>
-                          <span style={{fontSize:12,color:theme.textTertiary,flexShrink:0}}>›</span>
-                        </div>
-                      );
-                    })}
+              {/* User card */}
+              <div style={{background:theme.surface,border:`0.5px solid ${BRAND}`,borderRadius:12,overflow:"hidden"}}>
+                {/* Header */}
+                <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderBottom:myTasks.length>0?`0.5px solid ${theme.border}`:"none"}}>
+                  <div style={{width:40,height:40,borderRadius:"50%",background:effectiveColor+"18",color:effectiveColor,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:600,flexShrink:0,position:"relative",overflow:"hidden"}}>
+                    {effectiveAvatar
+                      ?<img src={effectiveAvatar} style={{width:40,height:40,borderRadius:"50%",objectFit:"cover"}} alt=""/>
+                      :initials(currentUser)
+                    }
+                    <div style={{position:"absolute",bottom:0,right:0,width:11,height:11,borderRadius:"50%",background:BRAND,border:`2px solid ${theme.surface}`}}/>
                   </div>
-                );
-              })}
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6}}>
+                      <span style={{fontSize:13,fontWeight:500,color:theme.textPrimary}}>{currentUser}</span>
+                      <span style={{fontSize:9,fontWeight:600,background:BRAND,color:"#2c2c2a",borderRadius:6,padding:"1px 5px",textTransform:"uppercase",letterSpacing:".04em"}}>You</span>
+                    </div>
+                    {meInTeam&&<div style={{fontSize:11,color:theme.textTertiary}}>{meInTeam.title}</div>}
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+                    {critCount>0&&<span style={{fontSize:10,padding:"2px 7px",borderRadius:10,background:"#FAECE7",color:"#993C1D",fontWeight:600}}>{critCount} critical</span>}
+                    {blockedCount>0&&<span style={{fontSize:10,padding:"2px 7px",borderRadius:10,background:"#FAEEDA",color:"#854F0B",fontWeight:600}}>{blockedCount} blocked</span>}
+                    <span style={{fontSize:11,color:theme.textTertiary}}>{doneTasks.length}/{myTasks.length} done</span>
+                  </div>
+                </div>
+
+                {/* Task rows */}
+                {myTasks.length===0&&<div style={{padding:"16px 14px",fontSize:12,color:theme.textTertiary}}>No tasks assigned to you yet.</div>}
+                {allSorted.map((task,i)=>{
+                  const isDone=task.status==="done";
+                  return(
+                    <div key={task.id} onClick={()=>setOpenTask(task.id)}
+                      style={{display:"flex",alignItems:"center",gap:10,padding:"9px 14px",borderBottom:i<allSorted.length-1?`0.5px solid ${theme.border}`:"none",cursor:"pointer",opacity:isDone?0.55:1}}
+                      onMouseEnter={e=>e.currentTarget.style.background=theme.surface2}
+                      onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                      <div style={{width:7,height:7,borderRadius:"50%",background:STATUS_DOT_COLORS[task.status]||"#888780",flexShrink:0}}/>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:12,color:isDone?theme.textTertiary:theme.textPrimary,textDecoration:isDone?"line-through":"none",lineHeight:1.35,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{task.t}</div>
+                        <div style={{display:"flex",gap:4,marginTop:3,flexWrap:"wrap",alignItems:"center"}}>
+                          <PriBadge p={task.p}/>
+                          <PhasePill phase={parseInt(task.phase)}/>
+                          {task.status!=="open"&&<StatusBadge status={task.status}/>}
+                          {task.deptName&&<span style={{fontSize:10,color:theme.textTertiary}}>{task.deptName}</span>}
+                        </div>
+                      </div>
+                      <span style={{fontSize:12,color:theme.textTertiary,flexShrink:0}}>›</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           );
         })()}
