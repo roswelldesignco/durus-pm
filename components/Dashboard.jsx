@@ -349,7 +349,7 @@ function ChangelogFeed({theme,onTaskClick,userColorMap={}}){
     catch(e){console.error(e);}
     setLoading(false);
   }
-  useEffect(()=>{load();const i=setInterval(load,15000);return()=>clearInterval(i);},[]);
+  useEffect(()=>{load();const i=setInterval(load,8000);return()=>clearInterval(i);},[]);
   const actionIcon={completed:"✓",reopened:"↩",updated:"✎",commented:"💬",added:"＋",deleted:"✕",status:"◎"};
   const actionColor={completed:"#3B6D11",reopened:"#854F0B",updated:"#185FA5",commented:"#534AB7",added:BRAND,deleted:"#993C1D",status:"#185FA5"};
   if(loading)return <div style={{padding:"20px 16px",textAlign:"center"}}><span style={{fontSize:12,color:theme.textTertiary}}>Loading activity...</span></div>;
@@ -911,7 +911,7 @@ export default function App(){
     if(!depts)return;
     const interval=setInterval(async()=>{
       try{const{data}=await supabase.from("tasks").select("*");if(data)setDepts(buildDepts(data));}catch(e){}
-    },10000);
+    },5000);
     return()=>clearInterval(interval);
   },[!!depts]);
 
@@ -932,6 +932,14 @@ export default function App(){
       alert("Save failed: "+e.message+"\n\nYour changes were not saved. Please copy any edits before refreshing the page.");
     }
     setSaving(false);
+  },[]);
+
+  const openTaskFresh=useCallback(async(taskId)=>{
+    setOpenTask(taskId);
+    try{
+      const{data}=await supabase.from("tasks").select("*").eq("id",taskId).single();
+      if(data)setDepts(prev=>prev.map(d=>({...d,tasks:d.tasks.map(t=>t.id===taskId?rowToTask(data):t)})));
+    }catch(e){console.error(e);}
   },[]);
 
   const deleteTaskFromDB=useCallback(async(taskId)=>{
@@ -1117,7 +1125,7 @@ export default function App(){
                 {crit.filter(t=>t.status!=="done").length===0
                   ?<div style={{fontSize:12,color:"#3B6D11"}}>All critical tasks complete!</div>
                   :crit.filter(t=>t.status!=="done").slice(0,isMobile?4:6).map(task=>(
-                    <div key={task.id} onClick={()=>setOpenTask(task.id)} style={{display:"flex",gap:8,padding:"7px 0",borderBottom:`0.5px solid ${theme.border}`,cursor:"pointer"}}>
+                    <div key={task.id} onClick={()=>openTaskFresh(task.id)} style={{display:"flex",gap:8,padding:"7px 0",borderBottom:`0.5px solid ${theme.border}`,cursor:"pointer"}}>
                       <div style={{width:5,height:5,borderRadius:"50%",background:"#D85A30",flexShrink:0,marginTop:6}}/>
                       <div>
                         <div style={{fontSize:12,color:theme.textPrimary,lineHeight:1.35}}>{task.t}</div>
@@ -1162,7 +1170,7 @@ export default function App(){
                 </div>
               </div>
               <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}`}</style>
-              <ChangelogFeed theme={theme} userColorMap={{[currentUser]:effectiveColor}} onTaskClick={(entry)=>{const task=allTasks.find(t=>t.t===entry.task_title);if(task)setOpenTask(task.id);}}/>
+              <ChangelogFeed theme={theme} userColorMap={{[currentUser]:effectiveColor}} onTaskClick={(entry)=>{const task=allTasks.find(t=>t.t===entry.task_title);if(task)openTaskFresh(task.id);}}/>
             </div>
           </div>
         )}
@@ -1201,7 +1209,7 @@ export default function App(){
                     <div>
                       {tasks.map(task=>(
                         isMobile?(
-                          <div key={task.id} style={{padding:"12px 14px",borderBottom:`0.5px solid ${theme.border}`,cursor:"pointer"}} onClick={()=>setOpenTask(task.id)}>
+                          <div key={task.id} style={{padding:"12px 14px",borderBottom:`0.5px solid ${theme.border}`,cursor:"pointer"}} onClick={()=>openTaskFresh(task.id)}>
                             <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
                               <div onClick={e=>{e.stopPropagation();toggleStatus(task.id);}} style={{width:22,height:22,borderRadius:6,border:`1.5px solid ${task.status==="done"?"#3B6D11":theme.borderMid}`,background:task.status==="done"?"#3B6D11":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,cursor:"pointer",marginTop:1}}>
                                 {task.status==="done"&&<div style={{width:9,height:6,borderLeft:"1.5px solid #fff",borderBottom:"1.5px solid #fff",transform:"rotate(-45deg) translate(0,1px)"}}/>}
@@ -1219,7 +1227,7 @@ export default function App(){
                           </div>
                         ):(
                           <div key={task.id} style={{display:"grid",gridTemplateColumns:"20px 1fr 140px 80px 90px 80px",gap:8,alignItems:"start",padding:"8px 14px",borderBottom:`0.5px solid ${theme.border}`,cursor:"pointer"}}
-                            onClick={()=>setOpenTask(task.id)}>
+                            onClick={()=>openTaskFresh(task.id)}>
                             <div onClick={e=>{e.stopPropagation();toggleStatus(task.id);}} style={{width:16,height:16,borderRadius:4,border:`1.5px solid ${task.status==="done"?"#3B6D11":theme.borderMid}`,background:task.status==="done"?"#3B6D11":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,cursor:"pointer",marginTop:1}}>
                               {task.status==="done"&&<div style={{width:8,height:5,borderLeft:"1.5px solid #fff",borderBottom:"1.5px solid #fff",transform:"rotate(-45deg) translate(0,1px)"}}/>}
                             </div>
@@ -1297,7 +1305,7 @@ export default function App(){
             <div style={{fontSize:12,color:theme.textTertiary,marginBottom:12}}>Click any team member to see their tasks. Your card is expanded by default.</div>
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               {TEAM_MEMBERS.map(p=>(
-                <TeamCard key={p.name} person={p} allTasks={allTasks} theme={theme} currentUser={currentUser} effectiveColor={effectiveColor} effectiveAvatar={effectiveAvatar} onTaskClick={(taskId)=>setOpenTask(taskId)}/>
+                <TeamCard key={p.name} person={p} allTasks={allTasks} theme={theme} currentUser={currentUser} effectiveColor={effectiveColor} effectiveAvatar={effectiveAvatar} onTaskClick={(taskId)=>openTaskFresh(taskId)}/>
               ))}
             </div>
           </div>
@@ -1363,7 +1371,7 @@ export default function App(){
                 {allSorted.map((task,i)=>{
                   const isDone=task.status==="done";
                   return(
-                    <div key={task.id} onClick={()=>setOpenTask(task.id)}
+                    <div key={task.id} onClick={()=>openTaskFresh(task.id)}
                       style={{display:"flex",alignItems:"center",gap:10,padding:"9px 14px",borderBottom:i<allSorted.length-1?`0.5px solid ${theme.border}`:"none",cursor:"pointer",opacity:isDone?0.55:1}}
                       onMouseEnter={e=>e.currentTarget.style.background=theme.surface2}
                       onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
@@ -1487,7 +1495,7 @@ export default function App(){
                         const owners=(t.owner||"").split(",").map(s=>s.trim()).filter(Boolean);
                         const taskColor=owners.length?memberColorOf(owners[0]):t.deptColor||"#888780";
                         return(
-                          <div key={t.id} onClick={()=>setOpenTask(t.id)}
+                          <div key={t.id} onClick={()=>openTaskFresh(t.id)}
                             title={t.t}
                             style={{fontSize:10,lineHeight:1.3,background:taskColor+"22",color:taskColor,borderRadius:4,padding:"2px 5px",marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",cursor:"pointer",fontWeight:500}}>
                             {t.t}
@@ -1511,7 +1519,7 @@ export default function App(){
                       const owners=(t.owner||"").split(",").map(s=>s.trim()).filter(Boolean);
                       const taskColor=owners.length?memberColorOf(owners[0]):t.deptColor||"#888780";
                       return(
-                        <div key={t.id} onClick={()=>setOpenTask(t.id)}
+                        <div key={t.id} onClick={()=>openTaskFresh(t.id)}
                           style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",background:theme.surface,border:`0.5px solid ${theme.border}`,borderRadius:8,cursor:"pointer"}}
                           onMouseEnter={e=>e.currentTarget.style.background=theme.surface2}
                           onMouseLeave={e=>e.currentTarget.style.background=theme.surface}>
