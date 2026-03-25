@@ -923,8 +923,14 @@ export default function App(){
 
   const persistTask=useCallback(async(task,deptId)=>{
     setSaving(true);
-    try{await supabase.from("tasks").upsert(taskToRow(task,deptId));setLastSaved(new Date());}
-    catch(e){console.error(e);}
+    try{
+      const{error}=await supabase.from("tasks").upsert(taskToRow(task,deptId));
+      if(error)throw error;
+      setLastSaved(new Date());
+    }catch(e){
+      console.error("persistTask failed:",e);
+      alert("Save failed: "+e.message+"\n\nYour changes were not saved. Please copy any edits before refreshing the page.");
+    }
     setSaving(false);
   },[]);
 
